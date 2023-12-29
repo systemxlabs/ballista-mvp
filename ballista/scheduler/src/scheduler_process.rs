@@ -39,7 +39,6 @@ use crate::cluster::BallistaCluster;
 use crate::config::SchedulerConfig;
 use crate::flight_sql::FlightSqlServiceImpl;
 use crate::metrics::default_metrics_collector;
-use crate::scheduler_server::externalscaler::external_scaler_server::ExternalScalerServer;
 use crate::scheduler_server::SchedulerServer;
 
 pub async fn start_server(
@@ -82,11 +81,8 @@ pub async fn start_server(
                         config.grpc_server_max_decoding_message_size as usize,
                     );
 
-            let keda_scaler = ExternalScalerServer::new(scheduler_server.clone());
-
             let tonic_builder = create_grpc_server()
-                .add_service(scheduler_grpc_server)
-                .add_service(keda_scaler);
+                .add_service(scheduler_grpc_server);
 
             #[cfg(feature = "flight-sql")]
             let tonic_builder = tonic_builder.add_service(FlightServiceServer::new(

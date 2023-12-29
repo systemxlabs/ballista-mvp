@@ -43,14 +43,7 @@ use crate::state::executor_manager::ExecutorManager;
 use crate::state::task_manager::TaskLauncher;
 use crate::state::SchedulerState;
 
-// include the generated protobuf source as a submodule
-#[allow(clippy::all)]
-pub mod externalscaler {
-    include!(concat!(env!("OUT_DIR"), "/externalscaler.rs"));
-}
-
 pub mod event;
-mod external_scaler;
 mod grpc;
 pub(crate) mod query_stage_scheduler;
 
