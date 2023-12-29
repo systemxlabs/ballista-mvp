@@ -15,11 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[cfg(feature = "prometheus")]
-pub mod prometheus;
-
-#[cfg(feature = "prometheus")]
-use crate::metrics::prometheus::PrometheusMetricsCollector;
 use ballista_core::error::Result;
 use std::sync::Arc;
 
@@ -74,13 +69,6 @@ impl SchedulerMetricsCollector for NoopMetricsCollector {
     }
 }
 
-/// Return a reference to the systems default metrics collector.
-#[cfg(feature = "prometheus")]
-pub fn default_metrics_collector() -> Result<Arc<dyn SchedulerMetricsCollector>> {
-    PrometheusMetricsCollector::current()
-}
-
-#[cfg(not(feature = "prometheus"))]
 pub fn default_metrics_collector() -> Result<Arc<dyn SchedulerMetricsCollector>> {
     Ok(Arc::new(NoopMetricsCollector::default()))
 }
