@@ -26,7 +26,6 @@ pub fn print_version() {
 pub mod cache_layer;
 pub mod client;
 pub mod config;
-pub mod consistent_hash;
 pub mod error;
 pub mod event_loop;
 pub mod execution_plans;

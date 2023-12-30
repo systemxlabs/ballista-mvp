@@ -126,14 +126,6 @@ async fn main() -> Result<()> {
     let task_distribution = match opt.task_distribution {
         TaskDistribution::Bias => TaskDistributionPolicy::Bias,
         TaskDistribution::RoundRobin => TaskDistributionPolicy::RoundRobin,
-        TaskDistribution::ConsistentHash => {
-            let num_replicas = opt.consistent_hash_num_replicas as usize;
-            let tolerance = opt.consistent_hash_tolerance as usize;
-            TaskDistributionPolicy::ConsistentHash {
-                num_replicas,
-                tolerance,
-            }
-        }
     };
 
     let config = SchedulerConfig {

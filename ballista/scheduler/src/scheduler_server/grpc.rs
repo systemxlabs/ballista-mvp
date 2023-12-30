@@ -129,10 +129,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
                 TaskDistributionPolicy::RoundRobin => {
                     bind_task_round_robin(available_slots, active_jobs, |_| false).await
                 }
-                TaskDistributionPolicy::ConsistentHash{..} => {
-                    return Err(Status::unimplemented(
-                        "ConsistentHash TaskDistribution is not feasible for pull-based task scheduling"))
-                }
             };
 
             let mut tasks = vec![];

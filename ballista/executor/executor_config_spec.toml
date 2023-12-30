@@ -83,7 +83,7 @@ abbr = "s"
 name = "task_scheduling_policy"
 type = "ballista_core::config::TaskSchedulingPolicy"
 doc = "The task scheduing policy for the scheduler, possible values: pull-staged, push-staged. Default: pull-staged"
-default = "ballista_core::config::TaskSchedulingPolicy::PullStaged"
+default = "ballista_core::config::TaskSchedulingPolicy::PushStaged"
 
 [[param]]
 name = "job_data_clean_up_interval_seconds"

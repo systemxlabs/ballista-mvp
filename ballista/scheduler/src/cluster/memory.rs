@@ -16,9 +16,9 @@
 // under the License.
 
 use crate::cluster::{
-    bind_task_bias, bind_task_consistent_hash, bind_task_round_robin, get_scan_files,
-    is_skip_consistent_hash, BoundTask, ClusterState, ExecutorSlot, JobState,
-    JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy, TopologyNode,
+    bind_task_bias, bind_task_round_robin,
+    BoundTask, ClusterState, ExecutorSlot, JobState,
+    JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
 };
 use crate::state::execution_graph::ExecutionGraph;
 use async_trait::async_trait;
@@ -41,7 +41,6 @@ use log::{error, info, warn};
 use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
 
-use ballista_core::consistent_hash::node::Node;
 use datafusion::physical_plan::ExecutionPlan;
 use std::sync::Arc;
 use tokio::sync::{Mutex, MutexGuard};
@@ -55,44 +54,6 @@ pub struct InMemoryClusterState {
     executors: DashMap<String, ExecutorMetadata>,
     /// Last heartbeat received for each executor
     heartbeats: DashMap<String, ExecutorHeartbeat>,
-}
-
-impl InMemoryClusterState {
-    /// Get the topology nodes of the cluster for consistent hashing
-    fn get_topology_nodes(
-        &self,
-        guard: &MutexGuard<HashMap<String, AvailableTaskSlots>>,
-        executors: Option<HashSet<String>>,
-    ) -> HashMap<String, TopologyNode> {
-        let mut nodes: HashMap<String, TopologyNode> = HashMap::new();
-        for (executor_id, slots) in guard.iter() {
-            if let Some(executors) = executors.as_ref() {
-                if !executors.contains(executor_id) {
-                    continue;
-                }
-            }
-            if let Some(executor) = self.executors.get(&slots.executor_id) {
-                let node = TopologyNode::new(
-                    &executor.host,
-                    executor.port,
-                    &slots.executor_id,
-                    self.heartbeats
-                        .get(&executor.id)
-                        .map(|heartbeat| heartbeat.timestamp)
-                        .unwrap_or(0),
-                    slots.slots,
-                );
-                if let Some(existing_node) = nodes.get(node.name()) {
-                    if existing_node.last_seen_ts < node.last_seen_ts {
-                        nodes.insert(node.name().to_string(), node);
-                    }
-                } else {
-                    nodes.insert(node.name().to_string(), node);
-                }
-            }
-        }
-        nodes
-    }
 }
 
 #[async_trait]
@@ -123,51 +84,6 @@ impl ClusterState for InMemoryClusterState {
             }
             TaskDistributionPolicy::RoundRobin => {
                 bind_task_round_robin(available_slots, active_jobs, |_| false).await
-            }
-            TaskDistributionPolicy::ConsistentHash {
-                num_replicas,
-                tolerance,
-            } => {
-                let mut bound_tasks = bind_task_round_robin(
-                    available_slots,
-                    active_jobs.clone(),
-                    |stage_plan: Arc<dyn ExecutionPlan>| {
-                        if let Ok(scan_files) = get_scan_files(stage_plan) {
-                            // Should be opposite to consistent hash ones.
-                            !is_skip_consistent_hash(&scan_files)
-                        } else {
-                            false
-                        }
-                    },
-                )
-                .await;
-                info!("{} tasks bound by round robin policy", bound_tasks.len());
-                let (bound_tasks_consistent_hash, ch_topology) =
-                    bind_task_consistent_hash(
-                        self.get_topology_nodes(&guard, executors),
-                        num_replicas,
-                        tolerance,
-                        active_jobs,
-                        |_, plan| get_scan_files(plan),
-                    )
-                    .await?;
-                info!(
-                    "{} tasks bound by consistent hashing policy",
-                    bound_tasks_consistent_hash.len()
-                );
-                if !bound_tasks_consistent_hash.is_empty() {
-                    bound_tasks.extend(bound_tasks_consistent_hash);
-                    // Update the available slots
-                    let ch_topology = ch_topology.unwrap();
-                    for node in ch_topology.nodes() {
-                        if let Some(data) = guard.get_mut(&node.id) {
-                            data.slots = node.available_slots;
-                        } else {
-                            error!("Fail to find executor data for {}", &node.id);
-                        }
-                    }
-                }
-                bound_tasks
             }
         };
 
