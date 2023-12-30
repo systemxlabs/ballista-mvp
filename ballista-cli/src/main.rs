@@ -121,13 +121,7 @@ pub async fn main() -> Result<()> {
             BallistaContext::remote(host, port, &ballista_config).await?
         }
         _ => {
-            let concurrent_tasks = if let Some(concurrent_tasks) = args.concurrent_tasks {
-                concurrent_tasks
-            } else {
-                num_cpus::get()
-            };
-            // In-process execution with Ballista Standalone
-            BallistaContext::standalone(&ballista_config, concurrent_tasks).await?
+            panic!("Need specify scheduler host and port")
         }
     };
 

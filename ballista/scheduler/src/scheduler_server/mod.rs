@@ -350,7 +350,7 @@ mod test {
 
     use ballista_core::serde::protobuf::{
         failed_task, job_status, task_status, ExecutionError, FailedTask, JobStatus,
-        MultiTaskDefinition, ShuffleWritePartition, SuccessfulJob, SuccessfulTask,
+        MultiTaskDefinition, SuccessfulJob,
         TaskId, TaskStatus,
     };
     use ballista_core::serde::scheduler::{
@@ -365,114 +365,6 @@ mod test {
         assert_submitted_event, test_cluster_context, ExplodingTableProvider,
         SchedulerTest, TaskRunnerFn, TestMetricsCollector,
     };
-
-    #[tokio::test]
-    async fn test_pull_scheduling() -> Result<()> {
-        let plan = test_plan();
-        let task_slots = 4;
-
-        let scheduler = test_scheduler(TaskSchedulingPolicy::PullStaged).await?;
-
-        let executors = test_executors(task_slots);
-        for (executor_metadata, executor_data) in executors {
-            scheduler
-                .state
-                .executor_manager
-                .register_executor(executor_metadata, executor_data)
-                .await?;
-        }
-
-        let config = test_session(task_slots);
-
-        let ctx = scheduler
-            .state
-            .session_manager
-            .create_session(&config)
-            .await?;
-
-        let job_id = "job";
-
-        // Enqueue job
-        scheduler
-            .state
-            .task_manager
-            .queue_job(job_id, "", timestamp_millis())?;
-
-        // Submit job
-        scheduler
-            .state
-            .submit_job(job_id, "", ctx, &plan, 0)
-            .await
-            .expect("submitting plan");
-
-        // Refresh the ExecutionGraph
-        while let Some(graph) = scheduler
-            .state
-            .task_manager
-            .get_active_execution_graph(job_id)
-        {
-            let task = {
-                let mut graph = graph.write().await;
-                graph.pop_next_task("executor-1")?
-            };
-            if let Some(task) = task {
-                let mut partitions: Vec<ShuffleWritePartition> = vec![];
-
-                let num_partitions = task.get_output_partition_number();
-
-                for partition_id in 0..num_partitions {
-                    partitions.push(ShuffleWritePartition {
-                        partition_id: partition_id as u64,
-                        path: "some/path".to_string(),
-                        num_batches: 1,
-                        num_rows: 1,
-                        num_bytes: 1,
-                    })
-                }
-
-                // Complete the task
-                let task_status = TaskStatus {
-                    task_id: task.task_id as u32,
-                    job_id: task.partition.job_id.clone(),
-                    stage_id: task.partition.stage_id as u32,
-                    stage_attempt_num: task.stage_attempt_num as u32,
-                    partition_id: task.partition.partition_id as u32,
-                    launch_time: 0,
-                    start_exec_time: 0,
-                    end_exec_time: 0,
-                    metrics: vec![],
-                    status: Some(task_status::Status::Successful(SuccessfulTask {
-                        executor_id: "executor-1".to_owned(),
-                        partitions,
-                    })),
-                };
-
-                scheduler
-                    .state
-                    .update_task_statuses("executor-1", vec![task_status])
-                    .await?;
-            } else {
-                break;
-            }
-        }
-
-        let final_graph = scheduler
-            .state
-            .task_manager
-            .get_active_execution_graph(job_id)
-            .expect("Fail to find graph in the cache");
-
-        let final_graph = final_graph.read().await;
-        assert!(final_graph.is_successful());
-        assert_eq!(final_graph.output_locations().len(), 4);
-
-        for output_location in final_graph.output_locations() {
-            assert_eq!(output_location.path, "some/path".to_owned());
-            assert_eq!(output_location.executor_meta.host, "localhost1".to_owned())
-        }
-
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_push_scheduling() -> Result<()> {
@@ -628,62 +520,6 @@ mod test {
         assert_failed_event("job", &metrics_collector);
 
         Ok(())
-    }
-
-    async fn test_scheduler(
-        scheduling_policy: TaskSchedulingPolicy,
-    ) -> Result<SchedulerServer<LogicalPlanNode, PhysicalPlanNode>> {
-        let cluster = test_cluster_context();
-
-        let config = SchedulerConfig::default().with_scheduler_policy(scheduling_policy);
-        let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new(
-                "localhost:50050".to_owned(),
-                cluster,
-                BallistaCodec::default(),
-                Arc::new(config),
-                Arc::new(TestMetricsCollector::default()),
-            );
-        scheduler.init().await?;
-
-        Ok(scheduler)
-    }
-
-    fn test_executors(num_partitions: usize) -> Vec<(ExecutorMetadata, ExecutorData)> {
-        let task_slots = (num_partitions as u32 + 1) / 2;
-
-        vec![
-            (
-                ExecutorMetadata {
-                    id: "executor-1".to_string(),
-                    host: "localhost1".to_string(),
-                    port: 8080,
-                    grpc_port: 9090,
-                    specification: ExecutorSpecification { task_slots },
-                },
-                ExecutorData {
-                    executor_id: "executor-1".to_owned(),
-                    total_task_slots: task_slots,
-                    available_task_slots: task_slots,
-                },
-            ),
-            (
-                ExecutorMetadata {
-                    id: "executor-2".to_string(),
-                    host: "localhost2".to_string(),
-                    port: 8080,
-                    grpc_port: 9090,
-                    specification: ExecutorSpecification {
-                        task_slots: num_partitions as u32 - task_slots,
-                    },
-                },
-                ExecutorData {
-                    executor_id: "executor-2".to_owned(),
-                    total_task_slots: num_partitions as u32 - task_slots,
-                    available_task_slots: num_partitions as u32 - task_slots,
-                },
-            ),
-        ]
     }
 
     fn test_plan() -> LogicalPlan {

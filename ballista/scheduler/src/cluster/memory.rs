@@ -37,13 +37,12 @@ use crate::scheduler_server::{timestamp_millis, timestamp_secs, SessionBuilder};
 use crate::state::session_manager::create_datafusion_context;
 use crate::state::task_manager::JobInfoCache;
 use ballista_core::serde::protobuf::job_status::Status;
-use log::{error, info, warn};
+use log::{warn};
 use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
 
-use datafusion::physical_plan::ExecutionPlan;
 use std::sync::Arc;
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::{Mutex, };
 use tracing::debug;
 
 #[derive(Default)]

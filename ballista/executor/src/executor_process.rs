@@ -70,7 +70,7 @@ use crate::metrics::LoggingMetricsCollector;
 use crate::shutdown::Shutdown;
 use crate::shutdown::ShutdownNotifier;
 use crate::terminate;
-use crate::{execution_loop, executor_server};
+use crate::{executor_server};
 
 pub struct ExecutorProcessConfig {
     pub bind_host: String,
@@ -347,13 +347,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
                 )
                 .await?,
             );
-        }
-        _ => {
-            service_handlers.push(tokio::spawn(execution_loop::poll_loop(
-                scheduler.clone(),
-                executor.clone(),
-                default_codec,
-            )));
         }
     };
     service_handlers.push(tokio::spawn(flight_server_run(
