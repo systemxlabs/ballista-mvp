@@ -23,7 +23,7 @@ use std::convert::TryInto;
 use ballista_core::serde::protobuf::executor_registration::OptionalHost;
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    execute_query_failure_result, execute_query_result, AvailableTaskSlots,
+    execute_query_failure_result, execute_query_result,
     CancelJobParams, CancelJobResult, CleanJobDataParams, CleanJobDataResult,
     CreateSessionParams, CreateSessionResult, ExecuteQueryFailureResult,
     ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult, ExecutorHeartbeat,
@@ -47,8 +47,6 @@ use object_store::{local::LocalFileSystem, path::Path, ObjectStore};
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::cluster::{bind_task_bias, bind_task_round_robin};
-use crate::config::TaskDistributionPolicy;
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use datafusion::prelude::SessionContext;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -64,87 +62,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
         &self,
         request: Request<PollWorkParams>,
     ) -> Result<Response<PollWorkResult>, Status> {
-        if self.state.config.is_push_staged_scheduling() {
-            error!("Poll work interface is not supported for push-based task scheduling");
-            return Err(tonic::Status::failed_precondition(
-                "Bad request because poll work is not supported for push-based task scheduling",
-            ));
-        }
-        let remote_addr = request.remote_addr();
-        if let PollWorkParams {
-            metadata: Some(metadata),
-            num_free_slots,
-            task_status,
-        } = request.into_inner()
-        {
-            trace!("Received poll_work request for {:?}", metadata);
-            let executor_id = metadata.id.clone();
-
-            // It's not necessary.
-            // It's only for the scheduler to have a picture of the whole executor cluster.
-            {
-                let metadata = ExecutorMetadata {
-                    id: metadata.id,
-                    host: metadata
-                        .optional_host
-                        .map(|h| match h {
-                            OptionalHost::Host(host) => host,
-                        })
-                        .unwrap_or_else(|| remote_addr.unwrap().ip().to_string()),
-                    port: metadata.port as u16,
-                    grpc_port: metadata.grpc_port as u16,
-                    specification: metadata.specification.unwrap().into(),
-                };
-                if let Err(e) = self
-                    .state
-                    .executor_manager
-                    .save_executor_metadata(metadata)
-                    .await
-                {
-                    warn!("Could not save executor metadata: {:?}", e);
-                }
-            }
-
-            self.update_task_status(&executor_id, task_status)
-                .await
-                .map_err(|e| {
-                    let msg = format!(
-                        "Fail to update tasks status from executor {:?} due to {:?}",
-                        &executor_id, e
-                    );
-                    error!("{}", msg);
-                    Status::internal(msg)
-                })?;
-
-            let mut available_slots = vec![AvailableTaskSlots {
-                executor_id,
-                slots: num_free_slots,
-            }];
-            let available_slots = available_slots.iter_mut().collect();
-            let active_jobs = self.state.task_manager.get_running_job_cache();
-            let schedulable_tasks = match self.state.config.task_distribution {
-                TaskDistributionPolicy::Bias => {
-                    bind_task_bias(available_slots, active_jobs, |_| false).await
-                }
-                TaskDistributionPolicy::RoundRobin => {
-                    bind_task_round_robin(available_slots, active_jobs, |_| false).await
-                }
-            };
-
-            let mut tasks = vec![];
-            for (_, task) in schedulable_tasks {
-                match self.state.task_manager.prepare_task_definition(task) {
-                    Ok(task_definition) => tasks.push(task_definition),
-                    Err(e) => {
-                        error!("Error preparing task definition: {:?}", e);
-                    }
-                }
-            }
-            Ok(Response::new(PollWorkResult { tasks }))
-        } else {
-            warn!("Received invalid executor poll_work request");
-            Err(Status::invalid_argument("Missing metadata in request"))
-        }
+        // DELETE
+        todo!()
     }
 
     async fn register_executor(
