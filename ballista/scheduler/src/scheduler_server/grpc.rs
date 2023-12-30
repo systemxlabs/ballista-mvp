@@ -29,7 +29,7 @@ use ballista_core::serde::protobuf::{
     ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult, ExecutorHeartbeat,
     ExecutorStoppedParams, ExecutorStoppedResult, GetFileMetadataParams,
     GetFileMetadataResult, GetJobStatusParams, GetJobStatusResult, HeartBeatParams,
-    HeartBeatResult, PollWorkParams, PollWorkResult, RegisterExecutorParams,
+    HeartBeatResult, RegisterExecutorParams,
     RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult,
     UpdateSessionParams, UpdateSessionResult, UpdateTaskStatusParams,
     UpdateTaskStatusResult,
@@ -58,14 +58,6 @@ use crate::scheduler_server::SchedulerServer;
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
     for SchedulerServer<T, U>
 {
-    async fn poll_work(
-        &self,
-        request: Request<PollWorkParams>,
-    ) -> Result<Response<PollWorkResult>, Status> {
-        // DELETE
-        todo!()
-    }
-
     async fn register_executor(
         &self,
         request: Request<RegisterExecutorParams>,

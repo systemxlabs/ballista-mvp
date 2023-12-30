@@ -427,13 +427,6 @@ message TaskStatus {
   repeated OperatorMetricsSet metrics = 12;
 }
 
-message PollWorkParams {
-  ExecutorRegistration metadata = 1;
-  uint32 num_free_slots = 2;
-  // All tasks must be reported until they reach the failed or completed state
-  repeated TaskStatus task_status = 3;
-}
-
 message TaskDefinition {
   uint32 task_id = 1;
   uint32 task_attempt_num = 2;
@@ -466,10 +459,6 @@ message SessionSettings {
 message JobSessionConfig {
   string session_id = 1;
   repeated KeyValuePair configs = 2;
-}
-
-message PollWorkResult {
-  repeated TaskDefinition tasks = 1;
 }
 
 message RegisterExecutorParams {
@@ -700,9 +689,6 @@ message RunningTaskInfo {
 }
 
 service SchedulerGrpc {
-  // Executors must poll the scheduler for heartbeat and to receive tasks
-  rpc PollWork (PollWorkParams) returns (PollWorkResult) {}
-
   rpc RegisterExecutor(RegisterExecutorParams) returns (RegisterExecutorResult) {}
 
   // Push-based task scheduler will only leverage this interface
