@@ -338,11 +338,9 @@ mod test {
     use datafusion::logical_expr::{col, sum, LogicalPlan};
 
     use datafusion::test_util::scan_empty;
-    use datafusion_proto::protobuf::LogicalPlanNode;
-    use datafusion_proto::protobuf::PhysicalPlanNode;
 
     use ballista_core::config::{
-        BallistaConfig, TaskSchedulingPolicy, BALLISTA_DEFAULT_SHUFFLE_PARTITIONS,
+        TaskSchedulingPolicy,
     };
     use ballista_core::error::Result;
 
@@ -353,16 +351,12 @@ mod test {
         MultiTaskDefinition, SuccessfulJob,
         TaskId, TaskStatus,
     };
-    use ballista_core::serde::scheduler::{
-        ExecutorData, ExecutorMetadata, ExecutorSpecification,
-    };
-    use ballista_core::serde::BallistaCodec;
 
-    use crate::scheduler_server::{timestamp_millis, SchedulerServer};
+    use crate::scheduler_server::{timestamp_millis, };
 
     use crate::test_utils::{
         assert_completed_event, assert_failed_event, assert_no_submitted_event,
-        assert_submitted_event, test_cluster_context, ExplodingTableProvider,
+        assert_submitted_event, ExplodingTableProvider,
         SchedulerTest, TaskRunnerFn, TestMetricsCollector,
     };
 
@@ -534,15 +528,5 @@ mod test {
             .unwrap()
             .build()
             .unwrap()
-    }
-
-    fn test_session(partitions: usize) -> BallistaConfig {
-        BallistaConfig::builder()
-            .set(
-                BALLISTA_DEFAULT_SHUFFLE_PARTITIONS,
-                format!("{partitions}").as_str(),
-            )
-            .build()
-            .expect("creating BallistaConfig")
     }
 }

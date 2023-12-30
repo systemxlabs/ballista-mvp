@@ -555,13 +555,12 @@ mod test {
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
         executor_registration::OptionalHost, executor_status, ExecutorRegistration,
-        ExecutorStatus, ExecutorStoppedParams, HeartBeatParams, PollWorkParams,
+        ExecutorStatus, ExecutorStoppedParams, HeartBeatParams,
         RegisterExecutorParams,
     };
     use ballista_core::serde::scheduler::ExecutorSpecification;
     use ballista_core::serde::BallistaCodec;
 
-    use crate::state::SchedulerState;
     use crate::test_utils::await_condition;
     use crate::test_utils::test_cluster_context;
 
