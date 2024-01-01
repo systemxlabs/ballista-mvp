@@ -81,10 +81,6 @@ async fn main() -> Result<()> {
         grpc_server_max_decoding_message_size: opt.grpc_server_max_decoding_message_size,
         grpc_server_max_encoding_message_size: opt.grpc_server_max_encoding_message_size,
         executor_heartbeat_interval_seconds: opt.executor_heartbeat_interval_seconds,
-        data_cache_policy: opt.data_cache_policy,
-        cache_dir: opt.cache_dir,
-        cache_capacity: opt.cache_capacity,
-        cache_io_concurrency: opt.cache_io_concurrency,
         execution_engine: None,
     };
 

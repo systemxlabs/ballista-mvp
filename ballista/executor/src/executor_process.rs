@@ -40,7 +40,7 @@ use uuid::Uuid;
 use datafusion::execution::runtime_env::{RuntimeConfig, RuntimeEnv};
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 
-use ballista_core::config::{DataCachePolicy, LogRotationPolicy, TaskSchedulingPolicy};
+use ballista_core::config::{LogRotationPolicy, TaskSchedulingPolicy};
 use ballista_core::error::BallistaError;
 use ballista_core::object_store_registry::with_object_store_registry;
 use ballista_core::serde::protobuf::executor_resource::Resource;
@@ -84,10 +84,6 @@ pub struct ExecutorProcessConfig {
     pub log_rotation_policy: LogRotationPolicy,
     pub job_data_ttl_seconds: u64,
     pub job_data_clean_up_interval_seconds: u64,
-    pub data_cache_policy: Option<DataCachePolicy>,
-    pub cache_dir: Option<String>,
-    pub cache_capacity: u64,
-    pub cache_io_concurrency: u32,
     /// The maximum size of a decoded message at the grpc server side.
     pub grpc_server_max_decoding_message_size: u32,
     /// The maximum size of an encoded message at the grpc server side.
