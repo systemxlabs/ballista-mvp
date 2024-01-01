@@ -13,7 +13,6 @@
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use crate::scheduler_server::SchedulerServer;
 use crate::state::execution_graph::ExecutionStage;
-use crate::state::execution_graph_dot::ExecutionGraphDot;
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::BALLISTA_VERSION;
 use datafusion::physical_plan::metrics::{MetricValue, MetricsSet, Time};
@@ -294,40 +293,19 @@ fn get_combined_count(metrics: &[MetricsSet], name: &str) -> usize {
 
 /// Generate a dot graph for the specified job id and return as plain text
 pub(crate) async fn get_job_dot_graph<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
-    job_id: String,
+    _data_server: SchedulerServer<T, U>,
+    _job_id: String,
 ) -> Result<String, Rejection> {
-    if let Some(graph) = data_server
-        .state
-        .task_manager
-        .get_job_execution_graph(&job_id)
-        .await
-        .map_err(|_| warp::reject())?
-    {
-        ExecutionGraphDot::generate(graph.as_ref()).map_err(|_| warp::reject())
-    } else {
-        Ok("Not Found".to_string())
-    }
+    Ok("Not Found".to_string())
 }
 
 /// Generate a dot graph for the specified job id and query stage and return as plain text
 pub(crate) async fn get_query_stage_dot_graph<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
-    job_id: String,
-    stage_id: usize,
+    _data_server: SchedulerServer<T, U>,
+    _job_id: String,
+    _stage_id: usize,
 ) -> Result<String, Rejection> {
-    if let Some(graph) = data_server
-        .state
-        .task_manager
-        .get_job_execution_graph(&job_id)
-        .await
-        .map_err(|_| warp::reject())?
-    {
-        ExecutionGraphDot::generate_for_query_stage(graph.as_ref(), stage_id)
-            .map_err(|_| warp::reject())
-    } else {
-        Ok("Not Found".to_string())
-    }
+    Ok("Not Found".to_string())
 }
 
 /// Generate an SVG graph for the specified job id and return it as plain text

@@ -46,7 +46,6 @@ use log::{debug, error, info, warn};
 use prost::Message;
 
 pub mod execution_graph;
-pub mod execution_graph_dot;
 pub mod executor_manager;
 pub mod session_manager;
 pub mod task_manager;
