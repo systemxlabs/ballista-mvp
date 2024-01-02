@@ -156,8 +156,6 @@ jobs:
           export ARROW_TEST_DATA=$(pwd)/testing/data
           export PARQUET_TEST_DATA=$(pwd)/parquet-testing/data
           cargo test
-          cd examples
-          cargo run --example standalone_sql --features=ballista/standalone
         env:
           CARGO_HOME: "/github/home/.cargo"
           CARGO_TARGET_DIR: "/github/home/target"
@@ -335,41 +333,6 @@ jobs:
         env:
           CARGO_HOME: "/github/home/.cargo"
           CARGO_TARGET_DIR: "/github/home/target"
-
-  docker:
-    name: Docker
-    needs: [linux-build-lib, react-build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v3
-      - name: Restore rust artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: rust-artifacts
-          path: /home/runner/work/arrow-ballista/arrow-ballista/target/release
-      - name: Restore react artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: react-artifacts
-          path: /home/runner/work/arrow-ballista/arrow-ballista/ballista/scheduler/ui/build
-      - name: Build and push Docker image
-        run: |
-          echo "github user is $DOCKER_USER"
-          docker build -t arrow-ballista-standalone:latest -f dev/docker/ballista-standalone.Dockerfile .
-          export DOCKER_TAG="$(git describe --exact-match --tags $(git log -n1 --pretty='%h') || echo '')"
-          if [[ $DOCKER_TAG =~ ^[0-9\.]+-rc[0-9]+$ ]]
-          then
-            echo "publishing docker tag $DOCKER_TAG"
-            docker tag arrow-ballista-standalone:latest ghcr.io/apache/arrow-ballista-standalone:$DOCKER_TAG
-            docker login ghcr.io -u $DOCKER_USER -p "$DOCKER_PASS"
-            docker push ghcr.io/apache/arrow-ballista-standalone:$DOCKER_TAG
-          fi
-        env:
-          DOCKER_USER: ${{ github.actor }}
-          DOCKER_PASS: ${{ secrets.GITHUB_TOKEN }}
 
   clippy:
     name: Clippy

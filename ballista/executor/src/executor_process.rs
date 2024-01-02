@@ -56,7 +56,7 @@ use ballista_core::utils::{
 };
 use ballista_core::BALLISTA_VERSION;
 
-use crate::execution_engine::ExecutionEngine;
+use crate::execution_engine::DatafusionExecutionEngine;
 use crate::executor::{Executor, TasksDrainedFuture};
 use crate::executor_server;
 use crate::executor_server::TERMINATING;
@@ -91,7 +91,7 @@ pub struct ExecutorProcessConfig {
     pub executor_heartbeat_interval_seconds: u64,
     /// Optional execution engine to use to execute physical plans, will default to
     /// DataFusion if none is provided.
-    pub execution_engine: Option<Arc<dyn ExecutionEngine>>,
+    pub execution_engine: Option<Arc<DatafusionExecutionEngine>>,
 }
 
 pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<()> {

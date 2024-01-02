@@ -17,8 +17,7 @@
 
 //! Ballista executor logic
 
-use crate::execution_engine::DefaultExecutionEngine;
-use crate::execution_engine::ExecutionEngine;
+use crate::execution_engine::DatafusionExecutionEngine;
 use crate::execution_engine::QueryStageExecutor;
 use crate::metrics::ExecutorMetricsCollector;
 use ballista_core::error::BallistaError;
@@ -91,7 +90,7 @@ pub struct Executor {
 
     /// Execution engine that the executor will delegate to
     /// for executing query stages
-    pub(crate) execution_engine: Arc<dyn ExecutionEngine>,
+    pub(crate) execution_engine: Arc<DatafusionExecutionEngine>,
 }
 
 impl Executor {
@@ -103,7 +102,7 @@ impl Executor {
         runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
         metrics_collector: Arc<dyn ExecutorMetricsCollector>,
         concurrent_tasks: usize,
-        execution_engine: Option<Arc<dyn ExecutionEngine>>,
+        execution_engine: Option<Arc<DatafusionExecutionEngine>>,
     ) -> Self {
         Self {
             metadata,
@@ -118,7 +117,7 @@ impl Executor {
             concurrent_tasks,
             abort_handles: Default::default(),
             execution_engine: execution_engine
-                .unwrap_or_else(|| Arc::new(DefaultExecutionEngine {})),
+                .unwrap_or_else(|| Arc::new(DatafusionExecutionEngine {})),
         }
     }
 }

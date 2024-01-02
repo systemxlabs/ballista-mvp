@@ -26,18 +26,6 @@ use datafusion::physical_plan::ExecutionPlan;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-/// Execution engine extension point
-
-pub trait ExecutionEngine: Sync + Send {
-    fn create_query_stage_exec(
-        &self,
-        job_id: String,
-        stage_id: usize,
-        plan: Arc<dyn ExecutionPlan>,
-        work_dir: &str,
-    ) -> Result<Arc<dyn QueryStageExecutor>>;
-}
-
 /// QueryStageExecutor executes a section of a query plan that has consistent partitioning and
 /// can be executed as one unit with each partition being executed in parallel. The output of each
 /// partition is re-partitioned and streamed to disk in Arrow IPC format. Future stages of the query
@@ -53,10 +41,10 @@ pub trait QueryStageExecutor: Sync + Send + Debug {
     fn collect_plan_metrics(&self) -> Vec<MetricsSet>;
 }
 
-pub struct DefaultExecutionEngine {}
+pub struct DatafusionExecutionEngine {}
 
-impl ExecutionEngine for DefaultExecutionEngine {
-    fn create_query_stage_exec(
+impl DatafusionExecutionEngine {
+    pub fn create_query_stage_exec(
         &self,
         job_id: String,
         stage_id: usize,
