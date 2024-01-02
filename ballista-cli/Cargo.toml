@@ -29,7 +29,7 @@ rust-version = "1.63"
 readme = "README.md"
 
 [dependencies]
-ballista = { path = "../ballista/client", version = "0.11.0", features = ["standalone"] }
+ballista = { path = "../ballista/client", version = "0.11.0" }
 clap = { version = "3", features = ["derive", "cargo"] }
 datafusion = { workspace = true }
 datafusion-cli = { workspace = true }

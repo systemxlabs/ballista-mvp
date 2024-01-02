@@ -23,7 +23,6 @@ members = [
     "ballista/executor",
     "ballista/scheduler",
     "benchmarks",
-    "examples"
 ]
 resolver = "2"
 

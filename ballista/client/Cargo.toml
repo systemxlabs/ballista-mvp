@@ -29,8 +29,6 @@ rust-version = "1.63"
 
 [dependencies]
 ballista-core = { path = "../core", version = "0.11.0" }
-ballista-executor = { path = "../executor", version = "0.11.0", optional = true }
-ballista-scheduler = { path = "../scheduler", version = "0.11.0", optional = true }
 datafusion = { workspace = true }
 datafusion-proto = { workspace = true }
 futures = "0.3"
@@ -46,4 +44,3 @@ default = []
 hdfs = ["ballista-core/hdfs"]
 hdfs3 = ["ballista-core/hdfs3"]
 s3 = ["ballista-core/s3"]
-standalone = ["ballista-executor", "ballista-scheduler"]
