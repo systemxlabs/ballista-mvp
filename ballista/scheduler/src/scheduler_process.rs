@@ -16,7 +16,6 @@
 // under the License.
 
 use anyhow::{Context, Result};
-#[cfg(feature = "flight-sql")]
 use arrow_flight::flight_service_server::FlightServiceServer;
 use futures::future::{self, Either, TryFutureExt};
 use hyper::{server::conn::AddrStream, service::make_service_fn, Server};
@@ -83,7 +82,6 @@ pub async fn start_server(
 
             let tonic_builder = create_grpc_server().add_service(scheduler_grpc_server);
 
-            #[cfg(feature = "flight-sql")]
             let tonic_builder = tonic_builder.add_service(FlightServiceServer::new(
                 FlightSqlServiceImpl::new(scheduler_server.clone()),
             ));

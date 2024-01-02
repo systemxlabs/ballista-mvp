@@ -145,12 +145,7 @@ impl BallistaCluster {
                     BallistaCodec::default(),
                 ))
             }
-            #[cfg(not(feature = "etcd"))]
-            StateBackend::Etcd => {
-                unimplemented!(
-                    "build the scheduler with the `etcd` feature to use the etcd config backend"
-                )
-            }
+
             #[cfg(feature = "sled")]
             ClusterStorageConfig::Sled(dir) => {
                 if let Some(dir) = dir.as_ref() {
@@ -174,12 +169,6 @@ impl BallistaCluster {
                         BallistaCodec::default(),
                     ))
                 }
-            }
-            #[cfg(not(feature = "sled"))]
-            StateBackend::Sled => {
-                unimplemented!(
-                    "build the scheduler with the `sled` feature to use the sled config backend"
-                )
             }
             ClusterStorageConfig::Memory => Ok(BallistaCluster::new_memory(
                 scheduler,

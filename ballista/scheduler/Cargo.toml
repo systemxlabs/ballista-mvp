@@ -34,9 +34,8 @@ name = "ballista-scheduler"
 path = "src/bin/main.rs"
 
 [features]
-default = ["etcd", "sled", "flight-sql"]
+default = ["etcd", "sled"]
 etcd = ["etcd-client"]
-flight-sql = []
 sled = ["sled_package", "tokio-stream"]
 
 
