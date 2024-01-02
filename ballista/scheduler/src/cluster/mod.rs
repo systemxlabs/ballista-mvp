@@ -561,9 +561,7 @@ mod test {
     use ballista_core::serde::protobuf::AvailableTaskSlots;
     use ballista_core::serde::scheduler::{ExecutorMetadata, ExecutorSpecification};
 
-    use crate::cluster::{
-        bind_task_bias, bind_task_round_robin, BoundTask,
-    };
+    use crate::cluster::{bind_task_bias, bind_task_round_robin, BoundTask};
     use crate::state::execution_graph::ExecutionGraph;
     use crate::state::task_manager::JobInfoCache;
     use crate::test_utils::{mock_completed_task, test_aggregation_plan_with_job_id};

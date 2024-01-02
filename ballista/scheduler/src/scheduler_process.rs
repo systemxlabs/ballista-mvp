@@ -81,8 +81,7 @@ pub async fn start_server(
                         config.grpc_server_max_decoding_message_size as usize,
                     );
 
-            let tonic_builder = create_grpc_server()
-                .add_service(scheduler_grpc_server);
+            let tonic_builder = create_grpc_server().add_service(scheduler_grpc_server);
 
             #[cfg(feature = "flight-sql")]
             let tonic_builder = tonic_builder.add_service(FlightServiceServer::new(

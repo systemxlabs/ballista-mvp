@@ -16,9 +16,8 @@
 // under the License.
 
 use crate::cluster::{
-    bind_task_bias, bind_task_round_robin,
-    BoundTask, ClusterState, ExecutorSlot, JobState,
-    JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
+    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorSlot,
+    JobState, JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
 };
 use crate::state::execution_graph::ExecutionGraph;
 use async_trait::async_trait;
@@ -37,12 +36,12 @@ use crate::scheduler_server::{timestamp_millis, timestamp_secs, SessionBuilder};
 use crate::state::session_manager::create_datafusion_context;
 use crate::state::task_manager::JobInfoCache;
 use ballista_core::serde::protobuf::job_status::Status;
-use log::{warn};
+use log::warn;
 use std::collections::{HashMap, HashSet};
 use std::ops::DerefMut;
 
 use std::sync::Arc;
-use tokio::sync::{Mutex, };
+use tokio::sync::Mutex;
 use tracing::debug;
 
 #[derive(Default)]

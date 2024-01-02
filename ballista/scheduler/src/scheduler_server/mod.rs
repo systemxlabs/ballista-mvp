@@ -339,25 +339,22 @@ mod test {
 
     use datafusion::test_util::scan_empty;
 
-    use ballista_core::config::{
-        TaskSchedulingPolicy,
-    };
+    use ballista_core::config::TaskSchedulingPolicy;
     use ballista_core::error::Result;
 
     use crate::config::SchedulerConfig;
 
     use ballista_core::serde::protobuf::{
         failed_task, job_status, task_status, ExecutionError, FailedTask, JobStatus,
-        MultiTaskDefinition, SuccessfulJob,
-        TaskId, TaskStatus,
+        MultiTaskDefinition, SuccessfulJob, TaskId, TaskStatus,
     };
 
-    use crate::scheduler_server::{timestamp_millis, };
+    use crate::scheduler_server::timestamp_millis;
 
     use crate::test_utils::{
         assert_completed_event, assert_failed_event, assert_no_submitted_event,
-        assert_submitted_event, ExplodingTableProvider,
-        SchedulerTest, TaskRunnerFn, TestMetricsCollector,
+        assert_submitted_event, ExplodingTableProvider, SchedulerTest, TaskRunnerFn,
+        TestMetricsCollector,
     };
 
     #[tokio::test]

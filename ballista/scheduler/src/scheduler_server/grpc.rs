@@ -23,16 +23,15 @@ use std::convert::TryInto;
 use ballista_core::serde::protobuf::executor_registration::OptionalHost;
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    execute_query_failure_result, execute_query_result,
-    CancelJobParams, CancelJobResult, CleanJobDataParams, CleanJobDataResult,
-    CreateSessionParams, CreateSessionResult, ExecuteQueryFailureResult,
-    ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult, ExecutorHeartbeat,
-    ExecutorStoppedParams, ExecutorStoppedResult, GetFileMetadataParams,
-    GetFileMetadataResult, GetJobStatusParams, GetJobStatusResult, HeartBeatParams,
-    HeartBeatResult, RegisterExecutorParams,
-    RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult,
-    UpdateSessionParams, UpdateSessionResult, UpdateTaskStatusParams,
-    UpdateTaskStatusResult,
+    execute_query_failure_result, execute_query_result, CancelJobParams, CancelJobResult,
+    CleanJobDataParams, CleanJobDataResult, CreateSessionParams, CreateSessionResult,
+    ExecuteQueryFailureResult, ExecuteQueryParams, ExecuteQueryResult,
+    ExecuteQuerySuccessResult, ExecutorHeartbeat, ExecutorStoppedParams,
+    ExecutorStoppedResult, GetFileMetadataParams, GetFileMetadataResult,
+    GetJobStatusParams, GetJobStatusResult, HeartBeatParams, HeartBeatResult,
+    RegisterExecutorParams, RegisterExecutorResult, RemoveSessionParams,
+    RemoveSessionResult, UpdateSessionParams, UpdateSessionResult,
+    UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
@@ -555,8 +554,7 @@ mod test {
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
         executor_registration::OptionalHost, executor_status, ExecutorRegistration,
-        ExecutorStatus, ExecutorStoppedParams, HeartBeatParams,
-        RegisterExecutorParams,
+        ExecutorStatus, ExecutorStoppedParams, HeartBeatParams, RegisterExecutorParams,
     };
     use ballista_core::serde::scheduler::ExecutorSpecification;
     use ballista_core::serde::BallistaCodec;

@@ -17,10 +17,9 @@
 
 use crate::cluster::storage::{KeyValueStore, Keyspace, Lock, Operation, WatchEvent};
 use crate::cluster::{
-    bind_task_bias, bind_task_round_robin,
-    BoundTask, ClusterState, ExecutorHeartbeatStream,
-    ExecutorSlot, JobState, JobStateEvent, JobStateEventStream, JobStatus,
-    TaskDistributionPolicy,
+    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState,
+    ExecutorHeartbeatStream, ExecutorSlot, JobState, JobStateEvent, JobStateEventStream,
+    JobStatus, TaskDistributionPolicy,
 };
 use crate::scheduler_server::{timestamp_secs, SessionBuilder};
 use crate::state::execution_graph::ExecutionGraph;

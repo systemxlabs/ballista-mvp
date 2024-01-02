@@ -87,7 +87,6 @@ impl ExecutionStage {
             ExecutionStage::Failed(_) => "Failed",
         }
     }
-
 }
 
 /// For a stage whose input stages are not all completed, we say it's a unresolved stage
