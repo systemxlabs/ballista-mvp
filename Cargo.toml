@@ -22,7 +22,6 @@ members = [
     "ballista/core",
     "ballista/executor",
     "ballista/scheduler",
-    "benchmarks",
 ]
 resolver = "2"
 
