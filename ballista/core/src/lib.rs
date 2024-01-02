@@ -27,7 +27,6 @@ pub mod config;
 pub mod error;
 pub mod event_loop;
 pub mod execution_plans;
-pub mod object_store_registry;
 pub mod utils;
 
 #[macro_use]
