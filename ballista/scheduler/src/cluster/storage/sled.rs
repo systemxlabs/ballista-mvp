@@ -24,7 +24,6 @@ use crate::cluster::storage::KeyValueStore;
 use async_trait::async_trait;
 use futures::{FutureExt, Stream};
 use log::warn;
-use sled_package as sled;
 use tokio::sync::Mutex;
 
 use crate::cluster::storage::{Keyspace, Lock, Operation, Watch, WatchEvent};

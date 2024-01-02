@@ -180,9 +180,7 @@ impl SchedulerConfig {
 #[derive(Clone, Debug)]
 pub enum ClusterStorageConfig {
     Memory,
-    #[cfg(feature = "etcd")]
     Etcd(Vec<String>),
-    #[cfg(feature = "sled")]
     Sled(Option<String>),
 }
 

@@ -128,7 +128,6 @@ impl BallistaCluster {
         let scheduler = config.scheduler_name();
 
         match &config.cluster_storage {
-            #[cfg(feature = "etcd")]
             ClusterStorageConfig::Etcd(urls) => {
                 let etcd = etcd_client::Client::connect(urls.as_slice(), None)
                     .await
@@ -146,7 +145,6 @@ impl BallistaCluster {
                 ))
             }
 
-            #[cfg(feature = "sled")]
             ClusterStorageConfig::Sled(dir) => {
                 if let Some(dir) = dir.as_ref() {
                     info!("Initializing Sled database in directory {}", dir);

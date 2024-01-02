@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[cfg(feature = "etcd")]
 pub mod etcd;
-#[cfg(feature = "sled")]
 pub mod sled;
 
 use async_trait::async_trait;

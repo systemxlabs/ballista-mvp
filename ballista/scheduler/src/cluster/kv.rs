@@ -683,7 +683,6 @@ mod test {
     use ballista_core::serde::BallistaCodec;
     use ballista_core::utils::default_session_builder;
 
-    #[cfg(feature = "sled")]
     #[tokio::test]
     async fn test_sled_job_lifecycle() -> Result<()> {
         test_job_lifecycle(make_sled_state()?, test_aggregation_plan(4).await).await?;
@@ -693,7 +692,6 @@ mod test {
         Ok(())
     }
 
-    #[cfg(feature = "sled")]
     #[tokio::test]
     async fn test_in_memory_job_planning_failure() -> Result<()> {
         test_job_planning_failure(make_sled_state()?, test_aggregation_plan(4).await)
@@ -708,7 +706,6 @@ mod test {
         Ok(())
     }
 
-    #[cfg(feature = "sled")]
     fn make_sled_state() -> Result<KeyValueState<SledClient>> {
         Ok(KeyValueState::new(
             "",

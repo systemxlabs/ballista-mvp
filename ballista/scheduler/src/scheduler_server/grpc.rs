@@ -540,7 +540,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
     }
 }
 
-#[cfg(all(test, feature = "sled"))]
+#[cfg(test)]
 mod test {
     use std::sync::Arc;
     use std::time::Duration;
