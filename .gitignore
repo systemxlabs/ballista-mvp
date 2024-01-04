@@ -99,3 +99,6 @@ dev/dist
 
 # logs
 logs/
+
+# testing data
+lineitem.parquet
