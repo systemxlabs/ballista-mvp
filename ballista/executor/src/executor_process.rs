@@ -40,7 +40,7 @@ use uuid::Uuid;
 use datafusion::execution::runtime_env::{RuntimeConfig, RuntimeEnv};
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 
-use ballista_core::config::{LogRotationPolicy, TaskSchedulingPolicy};
+use ballista_core::config::LogRotationPolicy;
 use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf::executor_resource::Resource;
 use ballista_core::serde::protobuf::executor_status::Status;
@@ -74,7 +74,6 @@ pub struct ExecutorProcessConfig {
     pub scheduler_port: u16,
     pub scheduler_connect_timeout_seconds: u16,
     pub concurrent_tasks: usize,
-    pub task_scheduling_policy: TaskSchedulingPolicy,
     pub log_dir: Option<String>,
     pub work_dir: Option<String>,
     pub special_mod_log_level: String,
@@ -242,7 +241,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     let default_codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> =
         BallistaCodec::default();
 
-    let scheduler_policy = opt.task_scheduling_policy;
     let job_data_ttl_seconds = opt.job_data_ttl_seconds;
 
     // Graceful shutdown notification
@@ -284,22 +282,18 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     // Channels used to receive stop requests from Executor grpc service.
     let (stop_send, mut stop_recv) = mpsc::channel::<bool>(10);
 
-    match scheduler_policy {
-        TaskSchedulingPolicy::PushStaged => {
-            service_handlers.push(
-                //If there is executor registration error during startup, return the error and stop early.
-                executor_server::startup(
-                    scheduler.clone(),
-                    opt.clone(),
-                    executor.clone(),
-                    default_codec,
-                    stop_send,
-                    &shutdown_noti,
-                )
-                .await?,
-            );
-        }
-    };
+    service_handlers.push(
+        //If there is executor registration error during startup, return the error and stop early.
+        executor_server::startup(
+            scheduler.clone(),
+            opt.clone(),
+            executor.clone(),
+            default_codec,
+            stop_send,
+            &shutdown_noti,
+        )
+        .await?,
+    );
     service_handlers.push(tokio::spawn(flight_server_run(
         addr,
         shutdown_noti.subscribe_for_shutdown(),

@@ -339,7 +339,6 @@ mod test {
 
     use datafusion::test_util::scan_empty;
 
-    use ballista_core::config::TaskSchedulingPolicy;
     use ballista_core::error::Result;
 
     use crate::config::SchedulerConfig;
@@ -364,8 +363,7 @@ mod test {
         let metrics_collector = Arc::new(TestMetricsCollector::default());
 
         let mut test = SchedulerTest::new(
-            SchedulerConfig::default()
-                .with_scheduler_policy(TaskSchedulingPolicy::PushStaged),
+            SchedulerConfig::default(),
             metrics_collector.clone(),
             4,
             1,
@@ -439,8 +437,7 @@ mod test {
         let metrics_collector = Arc::new(TestMetricsCollector::default());
 
         let mut test = SchedulerTest::new(
-            SchedulerConfig::default()
-                .with_scheduler_policy(TaskSchedulingPolicy::PushStaged),
+            SchedulerConfig::default(),
             metrics_collector.clone(),
             4,
             1,
@@ -474,8 +471,7 @@ mod test {
     async fn test_planning_failure() -> Result<()> {
         let metrics_collector = Arc::new(TestMetricsCollector::default());
         let mut test = SchedulerTest::new(
-            SchedulerConfig::default()
-                .with_scheduler_policy(TaskSchedulingPolicy::PushStaged),
+            SchedulerConfig::default(),
             metrics_collector.clone(),
             4,
             1,

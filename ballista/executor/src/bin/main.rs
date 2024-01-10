@@ -70,7 +70,6 @@ async fn main() -> Result<()> {
         scheduler_port: opt.scheduler_port,
         scheduler_connect_timeout_seconds: opt.scheduler_connect_timeout_seconds,
         concurrent_tasks: opt.concurrent_tasks,
-        task_scheduling_policy: opt.task_scheduling_policy,
         work_dir: opt.work_dir,
         log_dir: opt.log_dir,
         log_file_name_prefix,

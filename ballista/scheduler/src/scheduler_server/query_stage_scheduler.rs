@@ -351,7 +351,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 mod tests {
     use crate::config::SchedulerConfig;
     use crate::test_utils::{await_condition, SchedulerTest, TestMetricsCollector};
-    use ballista_core::config::TaskSchedulingPolicy;
     use ballista_core::error::Result;
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use datafusion::logical_expr::{col, sum, LogicalPlan};
@@ -371,8 +370,7 @@ mod tests {
         let metrics_collector = Arc::new(TestMetricsCollector::default());
 
         let mut test = SchedulerTest::new(
-            SchedulerConfig::default()
-                .with_scheduler_policy(TaskSchedulingPolicy::PushStaged),
+            SchedulerConfig::default(),
             metrics_collector.clone(),
             1,
             1,
