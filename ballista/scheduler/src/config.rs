@@ -89,11 +89,6 @@ impl SchedulerConfig {
         format!("{}:{}", self.external_host, self.bind_port)
     }
 
-    pub fn is_push_staged_scheduling(&self) -> bool {
-        // TODO lwz
-        true
-    }
-
     pub fn with_namespace(mut self, namespace: impl Into<String>) -> Self {
         self.namespace = namespace.into();
         self

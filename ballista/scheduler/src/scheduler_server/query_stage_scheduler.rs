@@ -141,11 +141,9 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 
                 info!("Job {} submitted", job_id);
 
-                if self.state.config.is_push_staged_scheduling() {
-                    event_sender
-                        .post_event(QueryStageSchedulerEvent::ReviveOffers)
-                        .await?;
-                }
+                event_sender
+                    .post_event(QueryStageSchedulerEvent::ReviveOffers)
+                    .await?;
             }
             QueryStageSchedulerEvent::JobPlanningFailed {
                 job_id,
@@ -257,23 +255,19 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                 );
 
                 let num_status = tasks_status.len();
-                if self.state.config.is_push_staged_scheduling() {
-                    self.state
-                        .executor_manager
-                        .unbind_tasks(vec![(executor_id.clone(), num_status as u32)])
-                        .await?;
-                }
+                self.state
+                    .executor_manager
+                    .unbind_tasks(vec![(executor_id.clone(), num_status as u32)])
+                    .await?;
                 match self
                     .state
                     .update_task_statuses(&executor_id, tasks_status)
                     .await
                 {
                     Ok(stage_events) => {
-                        if self.state.config.is_push_staged_scheduling() {
-                            event_sender
-                                .post_event(QueryStageSchedulerEvent::ReviveOffers)
-                                .await?;
-                        }
+                        event_sender
+                            .post_event(QueryStageSchedulerEvent::ReviveOffers)
+                            .await?;
 
                         for stage_event in stage_events {
                             event_sender.post_event(stage_event).await?;
