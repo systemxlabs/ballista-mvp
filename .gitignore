@@ -101,4 +101,4 @@ dev/dist
 logs/
 
 # testing data
-lineitem.parquet
+testdata/*
