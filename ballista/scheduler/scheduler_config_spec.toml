@@ -135,12 +135,6 @@ doc = "special log level for sub mod. link: https://docs.rs/env_logger/latest/en
 default = "std::string::String::from(\"INFO,datafusion=INFO\")"
 
 [[param]]
-name = "log_rotation_policy"
-type = "ballista_core::config::LogRotationPolicy"
-doc = "Tracing log rotation policy, possible values: minutely, hourly, daily, never. Default: daily"
-default = "ballista_core::config::LogRotationPolicy::Daily"
-
-[[param]]
 name = "job_resubmit_interval_ms"
 type = "u64"
 default = "0"

@@ -40,7 +40,6 @@ use uuid::Uuid;
 use datafusion::execution::runtime_env::{RuntimeConfig, RuntimeEnv};
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 
-use ballista_core::config::LogRotationPolicy;
 use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf::executor_resource::Resource;
 use ballista_core::serde::protobuf::executor_status::Status;
@@ -53,7 +52,6 @@ use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::{create_grpc_client_connection, create_grpc_server, get_time_before};
 use ballista_core::BALLISTA_VERSION;
 
-use crate::execution_engine::DatafusionExecutionEngine;
 use crate::executor::{Executor, TasksDrainedFuture};
 use crate::executor_server;
 use crate::executor_server::TERMINATING;
@@ -72,12 +70,8 @@ pub struct ExecutorProcessConfig {
     pub scheduler_port: u16,
     pub scheduler_connect_timeout_seconds: u16,
     pub concurrent_tasks: usize,
-    pub log_dir: Option<String>,
     pub work_dir: Option<String>,
     pub special_mod_log_level: String,
-    pub print_thread_info: bool,
-    pub log_file_name_prefix: String,
-    pub log_rotation_policy: LogRotationPolicy,
     pub job_data_ttl_seconds: u64,
     pub job_data_clean_up_interval_seconds: u64,
     /// The maximum size of a decoded message at the grpc server side.
@@ -85,47 +79,19 @@ pub struct ExecutorProcessConfig {
     /// The maximum size of an encoded message at the grpc server side.
     pub grpc_server_max_encoding_message_size: u32,
     pub executor_heartbeat_interval_seconds: u64,
-    /// Optional execution engine to use to execute physical plans, will default to
-    /// DataFusion if none is provided.
-    pub execution_engine: Option<Arc<DatafusionExecutionEngine>>,
 }
 
 pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<()> {
     let rust_log = env::var(EnvFilter::DEFAULT_ENV);
     let log_filter = EnvFilter::new(rust_log.unwrap_or(opt.special_mod_log_level.clone()));
-    // File layer
-    if let Some(log_dir) = opt.log_dir.clone() {
-        let log_file = match opt.log_rotation_policy {
-            LogRotationPolicy::Minutely => {
-                tracing_appender::rolling::minutely(log_dir, &opt.log_file_name_prefix)
-            }
-            LogRotationPolicy::Hourly => {
-                tracing_appender::rolling::hourly(log_dir, &opt.log_file_name_prefix)
-            }
-            LogRotationPolicy::Daily => {
-                tracing_appender::rolling::daily(log_dir, &opt.log_file_name_prefix)
-            }
-            LogRotationPolicy::Never => {
-                tracing_appender::rolling::never(log_dir, &opt.log_file_name_prefix)
-            }
-        };
-        tracing_subscriber::fmt()
-            .with_ansi(false)
-            .with_thread_names(opt.print_thread_info)
-            .with_thread_ids(opt.print_thread_info)
-            .with_writer(log_file)
-            .with_env_filter(log_filter)
-            .init();
-    } else {
-        // Console layer
-        tracing_subscriber::fmt()
-            .with_ansi(false)
-            .with_thread_names(opt.print_thread_info)
-            .with_thread_ids(opt.print_thread_info)
-            .with_writer(io::stdout)
-            .with_env_filter(log_filter)
-            .init();
-    }
+    // Console layer
+    tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_thread_names(true)
+        .with_thread_ids(true)
+        .with_writer(io::stdout)
+        .with_env_filter(log_filter)
+        .init();
 
     let addr = format!("{}:{}", opt.bind_host, opt.port);
     let addr = addr
@@ -188,7 +154,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         None,
         metrics_collector,
         concurrent_tasks,
-        opt.execution_engine.clone(),
     ));
 
     let connect_timeout = opt.scheduler_connect_timeout_seconds as u64;

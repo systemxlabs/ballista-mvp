@@ -18,10 +18,6 @@
 #![doc = include_str!("../README.md")]
 pub const BALLISTA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn print_version() {
-    println!("Ballista version: {BALLISTA_VERSION}")
-}
-
 pub mod client;
 pub mod config;
 pub mod error;

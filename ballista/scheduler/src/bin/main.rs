@@ -23,13 +23,9 @@ use std::{env, io};
 use anyhow::Result;
 
 use crate::config::{Config, ResultExt};
-use ballista_core::config::LogRotationPolicy;
-use ballista_core::print_version;
 use ballista_scheduler::cluster::BallistaCluster;
 use ballista_scheduler::cluster::ClusterStorage;
-use ballista_scheduler::config::{
-    ClusterStorageConfig, SchedulerConfig, TaskDistribution, TaskDistributionPolicy,
-};
+use ballista_scheduler::config::{ClusterStorageConfig, SchedulerConfig, TaskDistributionPolicy};
 use ballista_scheduler::scheduler_process::start_server;
 use tracing_subscriber::EnvFilter;
 
@@ -52,55 +48,16 @@ async fn main() -> Result<()> {
     let (opt, _remaining_args) =
         Config::including_optional_config_files(&["/etc/ballista/scheduler.toml"]).unwrap_or_exit();
 
-    if opt.version {
-        print_version();
-        std::process::exit(0);
-    }
-
-    let special_mod_log_level = opt.log_level_setting;
-    let log_dir = opt.log_dir;
-    let print_thread_info = opt.print_thread_info;
-
-    let log_file_name_prefix = format!(
-        "scheduler_{}_{}_{}",
-        opt.namespace, opt.external_host, opt.bind_port
-    );
-
     let rust_log = env::var(EnvFilter::DEFAULT_ENV);
-    let log_filter = EnvFilter::new(rust_log.unwrap_or(special_mod_log_level));
-    // File layer
-    if let Some(log_dir) = log_dir {
-        let log_file = match opt.log_rotation_policy {
-            LogRotationPolicy::Minutely => {
-                tracing_appender::rolling::minutely(log_dir, &log_file_name_prefix)
-            }
-            LogRotationPolicy::Hourly => {
-                tracing_appender::rolling::hourly(log_dir, &log_file_name_prefix)
-            }
-            LogRotationPolicy::Daily => {
-                tracing_appender::rolling::daily(log_dir, &log_file_name_prefix)
-            }
-            LogRotationPolicy::Never => {
-                tracing_appender::rolling::never(log_dir, &log_file_name_prefix)
-            }
-        };
-        tracing_subscriber::fmt()
-            .with_ansi(false)
-            .with_thread_names(print_thread_info)
-            .with_thread_ids(print_thread_info)
-            .with_writer(log_file)
-            .with_env_filter(log_filter)
-            .init();
-    } else {
-        // Console layer
-        tracing_subscriber::fmt()
-            .with_ansi(false)
-            .with_thread_names(print_thread_info)
-            .with_thread_ids(print_thread_info)
-            .with_writer(io::stdout)
-            .with_env_filter(log_filter)
-            .init();
-    }
+    let log_filter = EnvFilter::new(rust_log.unwrap_or("INFO,datafusion=INFO".to_string()));
+    // Console layer
+    tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_thread_names(true)
+        .with_thread_ids(true)
+        .with_writer(io::stdout)
+        .with_env_filter(log_filter)
+        .init();
 
     let addr = format!("{}:{}", opt.bind_host, opt.bind_port);
     let addr = addr.parse()?;
@@ -122,17 +79,12 @@ async fn main() -> Result<()> {
         }
     };
 
-    let task_distribution = match opt.task_distribution {
-        TaskDistribution::Bias => TaskDistributionPolicy::Bias,
-        TaskDistribution::RoundRobin => TaskDistributionPolicy::RoundRobin,
-    };
-
     let config = SchedulerConfig {
         namespace: opt.namespace,
         external_host: opt.external_host,
         bind_port: opt.bind_port,
         event_loop_buffer_size: opt.event_loop_buffer_size,
-        task_distribution,
+        task_distribution: TaskDistributionPolicy::Bias,
         finished_job_data_clean_up_interval_seconds: opt
             .finished_job_data_clean_up_interval_seconds,
         finished_job_state_clean_up_interval_seconds: opt

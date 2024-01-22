@@ -102,7 +102,6 @@ impl Executor {
         runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
         metrics_collector: Arc<dyn ExecutorMetricsCollector>,
         concurrent_tasks: usize,
-        execution_engine: Option<Arc<DatafusionExecutionEngine>>,
     ) -> Self {
         Self {
             metadata,
@@ -116,8 +115,7 @@ impl Executor {
             metrics_collector,
             concurrent_tasks,
             abort_handles: Default::default(),
-            execution_engine: execution_engine
-                .unwrap_or_else(|| Arc::new(DatafusionExecutionEngine {})),
+            execution_engine: Arc::new(DatafusionExecutionEngine {}),
         }
     }
 }
@@ -333,7 +331,6 @@ mod test {
             None,
             Arc::new(LoggingMetricsCollector {}),
             2,
-            None,
         );
 
         let (sender, receiver) = tokio::sync::oneshot::channel();

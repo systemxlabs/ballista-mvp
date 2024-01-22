@@ -20,7 +20,6 @@
 use anyhow::Result;
 use std::sync::Arc;
 
-use ballista_core::print_version;
 use ballista_executor::executor_process::{start_executor_process, ExecutorProcessConfig};
 use config::prelude::*;
 
@@ -44,19 +43,6 @@ async fn main() -> Result<()> {
     let (opt, _remaining_args) =
         Config::including_optional_config_files(&["/etc/ballista/executor.toml"]).unwrap_or_exit();
 
-    if opt.version {
-        print_version();
-        std::process::exit(0);
-    }
-
-    let log_file_name_prefix = format!(
-        "executor_{}_{}",
-        opt.external_host
-            .clone()
-            .unwrap_or_else(|| "localhost".to_string()),
-        opt.bind_port
-    );
-
     let config = ExecutorProcessConfig {
         special_mod_log_level: opt.log_level_setting,
         external_host: opt.external_host,
@@ -68,16 +54,11 @@ async fn main() -> Result<()> {
         scheduler_connect_timeout_seconds: opt.scheduler_connect_timeout_seconds,
         concurrent_tasks: opt.concurrent_tasks,
         work_dir: opt.work_dir,
-        log_dir: opt.log_dir,
-        log_file_name_prefix,
-        log_rotation_policy: opt.log_rotation_policy,
-        print_thread_info: opt.print_thread_info,
         job_data_ttl_seconds: opt.job_data_ttl_seconds,
         job_data_clean_up_interval_seconds: opt.job_data_clean_up_interval_seconds,
         grpc_server_max_decoding_message_size: opt.grpc_server_max_decoding_message_size,
         grpc_server_max_encoding_message_size: opt.grpc_server_max_encoding_message_size,
         executor_heartbeat_interval_seconds: opt.executor_heartbeat_interval_seconds,
-        execution_engine: None,
     };
 
     start_executor_process(Arc::new(config)).await
