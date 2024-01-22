@@ -23,7 +23,6 @@ use std::{env, io};
 use anyhow::Result;
 
 use ballista_scheduler::cluster::BallistaCluster;
-use ballista_scheduler::cluster::ClusterStorage;
 use ballista_scheduler::config::{ClusterStorageConfig, SchedulerConfig, TaskDistributionPolicy};
 use ballista_scheduler::scheduler_process::start_server;
 use tracing_subscriber::EnvFilter;
@@ -49,17 +48,18 @@ async fn main() -> Result<()> {
     let addr = format!("{}:{}", "0.0.0.0", bind_port);
     let addr = addr.parse()?;
 
-    let cluster_backend = ClusterStorage::Sled;
-    let cluster_storage_config = match cluster_backend {
-        ClusterStorage::Memory => ClusterStorageConfig::Memory,
-        ClusterStorage::Etcd => ClusterStorageConfig::Etcd(
+    let cluster_backend = env::var("CLUSTER_STORAGE").unwrap_or("sled".to_string());
+    let cluster_storage_config = match cluster_backend.as_str() {
+        "memory" => ClusterStorageConfig::Memory,
+        "etcd" => ClusterStorageConfig::Etcd(
             "localhost:2379"
                 .to_string()
                 .split_whitespace()
                 .map(|s| s.to_string())
                 .collect(),
         ),
-        ClusterStorage::Sled => ClusterStorageConfig::Sled(None),
+        "sled" => ClusterStorageConfig::Sled(None),
+        _ => unimplemented!(),
     };
 
     let config = SchedulerConfig {
