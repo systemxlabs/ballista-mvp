@@ -42,7 +42,7 @@ use datafusion::logical_expr::{
     CreateExternalTable, DdlStatement, LogicalPlan, TableScan,
 };
 use datafusion::prelude::{
-    AvroReadOptions, CsvReadOptions, NdJsonReadOptions, ParquetReadOptions,
+    AvroReadOptions, CsvReadOptions, ParquetReadOptions,
     SessionConfig, SessionContext,
 };
 use datafusion::sql::parser::{DFParser, Statement as DFStatement};
@@ -137,16 +137,6 @@ impl BallistaContext {
             state: Arc::new(Mutex::new(state)),
             context: Arc::new(ctx),
         })
-    }
-
-    /// Create a DataFrame representing an Json table scan
-    pub async fn read_json<P: DataFilePaths>(
-        &self,
-        paths: P,
-        options: NdJsonReadOptions<'_>,
-    ) -> Result<DataFrame> {
-        let df = self.context.read_json(paths, options).await?;
-        Ok(df)
     }
 
     /// Create a DataFrame representing an Avro table scan
