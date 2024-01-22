@@ -21,17 +21,6 @@ use anyhow::Result;
 use std::sync::Arc;
 
 use ballista_executor::executor_process::{start_executor_process, ExecutorProcessConfig};
-use config::prelude::*;
-
-#[macro_use]
-extern crate configure_me;
-
-#[allow(clippy::all, warnings)]
-mod config {
-    // Ideally we would use the include_config macro from configure_me, but then we cannot use
-    // #[allow(clippy::all)] to silence clippy warnings from the generated code
-    include!(concat!(env!("OUT_DIR"), "/executor_configure_me_config.rs"));
-}
 
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
@@ -39,26 +28,28 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // parse command-line arguments
-    let (opt, _remaining_args) =
-        Config::including_optional_config_files(&["/etc/ballista/executor.toml"]).unwrap_or_exit();
-
     let config = ExecutorProcessConfig {
-        special_mod_log_level: opt.log_level_setting,
-        external_host: opt.external_host,
-        bind_host: opt.bind_host,
-        port: opt.bind_port,
-        grpc_port: opt.bind_grpc_port,
-        scheduler_host: opt.scheduler_host,
-        scheduler_port: opt.scheduler_port,
-        scheduler_connect_timeout_seconds: opt.scheduler_connect_timeout_seconds,
-        concurrent_tasks: opt.concurrent_tasks,
-        work_dir: opt.work_dir,
-        job_data_ttl_seconds: opt.job_data_ttl_seconds,
-        job_data_clean_up_interval_seconds: opt.job_data_clean_up_interval_seconds,
-        grpc_server_max_decoding_message_size: opt.grpc_server_max_decoding_message_size,
-        grpc_server_max_encoding_message_size: opt.grpc_server_max_encoding_message_size,
-        executor_heartbeat_interval_seconds: opt.executor_heartbeat_interval_seconds,
+        special_mod_log_level: "INFO,datafusion=INFO".to_string(),
+        external_host: None,
+        bind_host: "0.0.0.0".to_string(),
+        port: std::env::var("BIND_PORT")
+            .unwrap_or("50051".to_string())
+            .parse::<u16>()
+            .unwrap(),
+        grpc_port: std::env::var("BIND_GRPC_PORT")
+            .unwrap_or("50052".to_string())
+            .parse::<u16>()
+            .unwrap(),
+        scheduler_host: "localhost".to_string(),
+        scheduler_port: 50050,
+        scheduler_connect_timeout_seconds: 0, // fail
+        concurrent_tasks: 0,                  // defaults to all available cores
+        work_dir: None,
+        job_data_ttl_seconds: 604800,
+        job_data_clean_up_interval_seconds: 0, // disable
+        grpc_server_max_decoding_message_size: 16777216, // 16MB
+        grpc_server_max_encoding_message_size: 16777216, // 16MB
+        executor_heartbeat_interval_seconds: 60,
     };
 
     start_executor_process(Arc::new(config)).await
