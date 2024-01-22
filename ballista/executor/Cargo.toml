@@ -30,9 +30,6 @@ edition = "2021"
 name = "ballista-executor"
 path = "src/bin/main.rs"
 
-[features]
-default = ["mimalloc"]
-
 [dependencies]
 anyhow = "1"
 arrow = { workspace = true }
@@ -46,7 +43,6 @@ datafusion-proto = { workspace = true }
 futures = "0.3"
 hyper = "0.14.4"
 log = "0.4"
-mimalloc = { version = "0.1", default-features = false, optional = true }
 num_cpus = "1.13.0"
 parking_lot = "0.12"
 tempfile = "3"

@@ -24,10 +24,6 @@ use ballista_cli::{
 };
 use clap::Parser;
 use datafusion_cli::print_options::MaxRows;
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Debug, Parser, PartialEq)]
 #[clap(author, version, about, long_about= None)]

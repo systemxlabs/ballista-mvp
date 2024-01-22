@@ -22,10 +22,6 @@ use std::sync::Arc;
 
 use ballista_executor::executor_process::{start_executor_process, ExecutorProcessConfig};
 
-#[cfg(feature = "mimalloc")]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = ExecutorProcessConfig {
