@@ -42,8 +42,7 @@ use datafusion::logical_expr::{
     CreateExternalTable, DdlStatement, LogicalPlan, TableScan,
 };
 use datafusion::prelude::{
-    AvroReadOptions, CsvReadOptions, ParquetReadOptions,
-    SessionConfig, SessionContext,
+    AvroReadOptions, CsvReadOptions, ParquetReadOptions, SessionConfig, SessionContext,
 };
 use datafusion::sql::parser::{DFParser, Statement as DFStatement};
 
