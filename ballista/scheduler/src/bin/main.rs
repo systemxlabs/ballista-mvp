@@ -28,19 +28,6 @@ use ballista_scheduler::config::{ClusterStorageConfig, SchedulerConfig, TaskDist
 use ballista_scheduler::scheduler_process::start_server;
 use tracing_subscriber::EnvFilter;
 
-#[macro_use]
-extern crate configure_me;
-
-#[allow(clippy::all, warnings)]
-mod config {
-    // Ideally we would use the include_config macro from configure_me, but then we cannot use
-    // #[allow(clippy::all)] to silence clippy warnings from the generated code
-    include!(concat!(
-        env!("OUT_DIR"),
-        "/scheduler_configure_me_config.rs"
-    ));
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let bind_port = env::var("BIND_PORT")

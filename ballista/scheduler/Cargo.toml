@@ -26,9 +26,6 @@ readme = "README.md"
 authors = ["Apache Arrow <dev@arrow.apache.org>"]
 edition = "2021"
 
-[package.metadata.configure_me.bin]
-scheduler = "scheduler_config_spec.toml"
-
 [[bin]]
 name = "ballista-scheduler"
 path = "src/bin/main.rs"
@@ -41,7 +38,6 @@ async-trait = "0.1.41"
 ballista-core = { path = "../core", version = "0.11.0" }
 base64 = { version = "0.21" }
 clap = { version = "3", features = ["derive", "cargo"] }
-configure_me = { workspace = true }
 dashmap = "5.4.0"
 datafusion = { workspace = true }
 datafusion-proto = { workspace = true }
@@ -75,5 +71,4 @@ warp = "0.3"
 ballista-core = { path = "../core", version = "0.11.0" }
 
 [build-dependencies]
-configure_me_codegen = { workspace = true }
 tonic-build = { workspace = true }
