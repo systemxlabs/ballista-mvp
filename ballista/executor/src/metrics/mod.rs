@@ -50,7 +50,10 @@ impl ExecutorMetricsCollector for LoggingMetricsCollector {
     ) {
         info!(
             "=== [{}/{}/{}] Physical plan with metrics ===\n{:?}\n",
-            job_id, stage_id, partition, plan.collect_plan_metrics()
+            job_id,
+            stage_id,
+            partition,
+            plan.collect_plan_metrics()
         );
     }
 }
