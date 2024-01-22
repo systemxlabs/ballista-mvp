@@ -22,7 +22,6 @@ use std::{env, io};
 
 use anyhow::Result;
 
-use crate::config::{Config, ResultExt};
 use ballista_scheduler::cluster::BallistaCluster;
 use ballista_scheduler::cluster::ClusterStorage;
 use ballista_scheduler::config::{ClusterStorageConfig, SchedulerConfig, TaskDistributionPolicy};
@@ -44,9 +43,10 @@ mod config {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // parse options
-    let (opt, _remaining_args) =
-        Config::including_optional_config_files(&["/etc/ballista/scheduler.toml"]).unwrap_or_exit();
+    let bind_port = env::var("BIND_PORT")
+        .unwrap_or("50050".to_string())
+        .parse::<u16>()
+        .unwrap();
 
     let rust_log = env::var(EnvFilter::DEFAULT_ENV);
     let log_filter = EnvFilter::new(rust_log.unwrap_or("INFO,datafusion=INFO".to_string()));
@@ -59,47 +59,39 @@ async fn main() -> Result<()> {
         .with_env_filter(log_filter)
         .init();
 
-    let addr = format!("{}:{}", opt.bind_host, opt.bind_port);
+    let addr = format!("{}:{}", "0.0.0.0", bind_port);
     let addr = addr.parse()?;
 
-    let cluster_storage_config = match opt.cluster_backend {
+    let cluster_backend = ClusterStorage::Sled;
+    let cluster_storage_config = match cluster_backend {
         ClusterStorage::Memory => ClusterStorageConfig::Memory,
         ClusterStorage::Etcd => ClusterStorageConfig::Etcd(
-            opt.etcd_urls
+            "localhost:2379"
+                .to_string()
                 .split_whitespace()
                 .map(|s| s.to_string())
                 .collect(),
         ),
-        ClusterStorage::Sled => {
-            if opt.sled_dir.is_empty() {
-                ClusterStorageConfig::Sled(None)
-            } else {
-                ClusterStorageConfig::Sled(Some(opt.sled_dir))
-            }
-        }
+        ClusterStorage::Sled => ClusterStorageConfig::Sled(None),
     };
 
     let config = SchedulerConfig {
-        namespace: opt.namespace,
-        external_host: opt.external_host,
-        bind_port: opt.bind_port,
-        event_loop_buffer_size: opt.event_loop_buffer_size,
+        namespace: "ballista".to_string(),
+        external_host: "localhost".to_string(),
+        bind_port,
+        event_loop_buffer_size: 10000,
         task_distribution: TaskDistributionPolicy::Bias,
-        finished_job_data_clean_up_interval_seconds: opt
-            .finished_job_data_clean_up_interval_seconds,
-        finished_job_state_clean_up_interval_seconds: opt
-            .finished_job_state_clean_up_interval_seconds,
-        advertise_flight_sql_endpoint: opt.advertise_flight_sql_endpoint,
+        finished_job_data_clean_up_interval_seconds: 300,
+        finished_job_state_clean_up_interval_seconds: 3600,
+        advertise_flight_sql_endpoint: None,
         cluster_storage: cluster_storage_config,
-        job_resubmit_interval_ms: (opt.job_resubmit_interval_ms > 0)
-            .then_some(opt.job_resubmit_interval_ms),
-        executor_termination_grace_period: opt.executor_termination_grace_period,
-        scheduler_event_expected_processing_duration: opt
-            .scheduler_event_expected_processing_duration,
-        grpc_server_max_decoding_message_size: opt.grpc_server_max_decoding_message_size,
-        grpc_server_max_encoding_message_size: opt.grpc_server_max_encoding_message_size,
-        executor_timeout_seconds: opt.executor_timeout_seconds,
-        expire_dead_executor_interval_seconds: opt.expire_dead_executor_interval_seconds,
+        job_resubmit_interval_ms: None,        // not resubmit
+        executor_termination_grace_period: 30, // seconds
+        scheduler_event_expected_processing_duration: 0, // disable
+        grpc_server_max_decoding_message_size: 16777216, // 16MB
+        grpc_server_max_encoding_message_size: 16777216, // 16MB
+        executor_timeout_seconds: 180,
+        expire_dead_executor_interval_seconds: 15,
     };
 
     let cluster = BallistaCluster::new_from_config(&config).await?;
