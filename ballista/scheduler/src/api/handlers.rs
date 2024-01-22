@@ -127,9 +127,7 @@ pub(crate) async fn get_jobs<T: AsLogicalPlan, U: AsExecutionPlan>(
                     let num_rows = completed
                         .partition_location
                         .iter()
-                        .map(|p| {
-                            p.partition_stats.as_ref().map(|s| s.num_rows).unwrap_or(0)
-                        })
+                        .map(|p| p.partition_stats.as_ref().map(|s| s.num_rows).unwrap_or(0))
                         .sum::<i64>();
                     let num_rows_term = if num_rows == 1 { "row" } else { "rows" };
                     let num_partitions = completed.partition_location.len();
@@ -140,7 +138,10 @@ pub(crate) async fn get_jobs<T: AsLogicalPlan, U: AsExecutionPlan>(
                     };
                     format!(
                         "Completed. Produced {} {} containing {} {}. Elapsed time: {} ms.",
-                        num_partitions, num_partitions_term, num_rows, num_rows_term,
+                        num_partitions,
+                        num_partitions_term,
+                        num_rows,
+                        num_rows_term,
                         job.end_time - job.start_time
                     )
                 }
@@ -238,14 +239,10 @@ pub(crate) async fn get_query_stages<T: AsLogicalPlan, U: AsExecutionPlan>(
                                 .unwrap_or_default();
                         }
                         ExecutionStage::Successful(completed_stage) => {
-                            summary.input_rows = get_combined_count(
-                                &completed_stage.stage_metrics,
-                                "input_rows",
-                            );
-                            summary.output_rows = get_combined_count(
-                                &completed_stage.stage_metrics,
-                                "output_rows",
-                            );
+                            summary.input_rows =
+                                get_combined_count(&completed_stage.stage_metrics, "input_rows");
+                            summary.output_rows =
+                                get_combined_count(&completed_stage.stage_metrics, "output_rows");
                             summary.elapsed_compute =
                                 get_elapsed_compute_nanos(&completed_stage.stage_metrics);
                         }
@@ -339,8 +336,6 @@ pub(crate) async fn get_scheduler_metrics<T: AsLogicalPlan, U: AsExecutionPlan>(
         .metrics_collector()
         .gather_metrics()
         .map_err(|_| warp::reject())?
-        .map(|(data, content_type)| {
-            warp::reply::with_header(data, CONTENT_TYPE, content_type)
-        })
+        .map(|(data, content_type)| warp::reply::with_header(data, CONTENT_TYPE, content_type))
         .unwrap_or_else(|| warp::reply::with_header(vec![], CONTENT_TYPE, "text/html")))
 }

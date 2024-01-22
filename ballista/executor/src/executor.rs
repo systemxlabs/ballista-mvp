@@ -236,10 +236,7 @@ mod test {
     impl Stream for NeverendingRecordBatchStream {
         type Item = Result<RecordBatch, DataFusionError>;
 
-        fn poll_next(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-        ) -> Poll<Option<Self::Item>> {
+        fn poll_next(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             Poll::Pending
         }
     }
@@ -249,11 +246,7 @@ mod test {
     pub struct NeverendingOperator;
 
     impl DisplayAs for NeverendingOperator {
-        fn fmt_as(
-            &self,
-            t: DisplayFormatType,
-            f: &mut std::fmt::Formatter,
-        ) -> std::fmt::Result {
+        fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match t {
                 DisplayFormatType::Default | DisplayFormatType::Verbose => {
                     write!(f, "NeverendingOperator")

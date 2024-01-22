@@ -45,14 +45,12 @@ use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf::executor_resource::Resource;
 use ballista_core::serde::protobuf::executor_status::Status;
 use ballista_core::serde::protobuf::{
-    executor_registration, scheduler_grpc_client::SchedulerGrpcClient,
-    ExecutorRegistration, ExecutorResource, ExecutorSpecification, ExecutorStatus,
-    ExecutorStoppedParams, HeartBeatParams,
+    executor_registration, scheduler_grpc_client::SchedulerGrpcClient, ExecutorRegistration,
+    ExecutorResource, ExecutorSpecification, ExecutorStatus, ExecutorStoppedParams,
+    HeartBeatParams,
 };
 use ballista_core::serde::BallistaCodec;
-use ballista_core::utils::{
-    create_grpc_client_connection, create_grpc_server, get_time_before,
-};
+use ballista_core::utils::{create_grpc_client_connection, create_grpc_server, get_time_before};
 use ballista_core::BALLISTA_VERSION;
 
 use crate::execution_engine::DatafusionExecutionEngine;
@@ -94,8 +92,7 @@ pub struct ExecutorProcessConfig {
 
 pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<()> {
     let rust_log = env::var(EnvFilter::DEFAULT_ENV);
-    let log_filter =
-        EnvFilter::new(rust_log.unwrap_or(opt.special_mod_log_level.clone()));
+    let log_filter = EnvFilter::new(rust_log.unwrap_or(opt.special_mod_log_level.clone()));
     // File layer
     if let Some(log_dir) = opt.log_dir.clone() {
         let log_file = match opt.log_rotation_policy {
@@ -205,9 +202,7 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         // that docker-compose's restart policy will restart the container.
         let start_time = Instant::now().elapsed().as_secs();
         let mut x = None;
-        while x.is_none()
-            && Instant::now().elapsed().as_secs() - start_time < connect_timeout
-        {
+        while x.is_none() && Instant::now().elapsed().as_secs() - start_time < connect_timeout {
             match create_grpc_client_connection(scheduler_url.clone())
                 .await
                 .context("Could not connect to scheduler")
@@ -238,8 +233,7 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         .max_encoding_message_size(16 * 1024 * 1024)
         .max_decoding_message_size(16 * 1024 * 1024);
 
-    let default_codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> =
-        BallistaCodec::default();
+    let default_codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> = BallistaCodec::default();
 
     let job_data_ttl_seconds = opt.job_data_ttl_seconds;
 

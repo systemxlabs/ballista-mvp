@@ -25,8 +25,8 @@ use crate::serde::protobuf;
 use datafusion_proto::protobuf as datafusion_protobuf;
 
 use crate::serde::scheduler::{
-    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId,
-    PartitionLocation, PartitionStats,
+    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation,
+    PartitionStats,
 };
 use datafusion::physical_plan::Partitioning;
 use protobuf::{action::ActionType, operator_metric, NamedCount, NamedGauge, NamedTime};
@@ -226,9 +226,7 @@ impl Into<protobuf::ExecutorData> for ExecutorData {
         protobuf::ExecutorData {
             executor_id: self.executor_id,
             resources: vec![ExecutorResourcePair {
-                total: protobuf::executor_resource::Resource::TaskSlots(
-                    self.total_task_slots,
-                ),
+                total: protobuf::executor_resource::Resource::TaskSlots(self.total_task_slots),
                 available: protobuf::executor_resource::Resource::TaskSlots(
                     self.available_task_slots,
                 ),

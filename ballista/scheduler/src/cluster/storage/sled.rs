@@ -180,12 +180,7 @@ impl KeyValueStore for SledClient {
         })
     }
 
-    async fn mv(
-        &self,
-        from_keyspace: Keyspace,
-        to_keyspace: Keyspace,
-        key: &str,
-    ) -> Result<()> {
+    async fn mv(&self, from_keyspace: Keyspace, to_keyspace: Keyspace, key: &str) -> Result<()> {
         let from_key = format!("/{from_keyspace:?}/{key}");
         let to_key = format!("/{to_keyspace:?}/{key}");
 

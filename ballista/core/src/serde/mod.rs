@@ -39,9 +39,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::{convert::TryInto, io::Cursor};
 
-use crate::execution_plans::{
-    ShuffleReaderExec, ShuffleWriterExec, UnresolvedShuffleExec,
-};
+use crate::execution_plans::{ShuffleReaderExec, ShuffleWriterExec, UnresolvedShuffleExec};
 use crate::serde::protobuf::ballista_physical_plan_node::PhysicalPlanType;
 use crate::serde::scheduler::PartitionLocation;
 pub use generated::ballista as protobuf;
@@ -184,8 +182,7 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
                 Ok(Arc::new(UnresolvedShuffleExec {
                     stage_id: unresolved_shuffle.stage_id as usize,
                     schema,
-                    output_partition_count: unresolved_shuffle.output_partition_count
-                        as usize,
+                    output_partition_count: unresolved_shuffle.output_partition_count as usize,
                 }))
             }
         }

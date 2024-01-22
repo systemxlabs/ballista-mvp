@@ -91,9 +91,7 @@ impl Command {
             Self::Quit => Err(BallistaError::Internal(
                 "Unexpected quit, this should be handled outside".to_string(),
             )),
-            Self::ListFunctions => {
-                display_all_functions().map_err(BallistaError::DataFusionError)
-            }
+            Self::ListFunctions => display_all_functions().map_err(BallistaError::DataFusionError),
             Self::SearchFunctions(function) => {
                 if let Ok(func) = function.parse::<Function>() {
                     let details = func.function_details()?;
@@ -105,8 +103,7 @@ impl Command {
                 }
             }
             Self::OutputFormat(_) => Err(BallistaError::Internal(
-                "Unexpected change output format, this should be handled outside"
-                    .to_string(),
+                "Unexpected change output format, this should be handled outside".to_string(),
             )),
         }
     }
@@ -120,9 +117,7 @@ impl Command {
             Self::ListFunctions => ("\\h", "function list"),
             Self::SearchFunctions(_) => ("\\h function", "search function"),
             Self::QuietMode(_) => ("\\quiet (true|false)?", "print or set quiet mode"),
-            Self::OutputFormat(_) => {
-                ("\\pset [NAME [VALUE]]", "set table output option\n(format)")
-            }
+            Self::OutputFormat(_) => ("\\pset [NAME [VALUE]]", "set table output option\n(format)"),
         }
     }
 }
@@ -173,16 +168,10 @@ impl FromStr for Command {
             ("?", None) => Self::Help,
             ("h", None) => Self::ListFunctions,
             ("h", Some(function)) => Self::SearchFunctions(function.into()),
-            ("quiet", Some("true" | "t" | "yes" | "y" | "on")) => {
-                Self::QuietMode(Some(true))
-            }
-            ("quiet", Some("false" | "f" | "no" | "n" | "off")) => {
-                Self::QuietMode(Some(false))
-            }
+            ("quiet", Some("true" | "t" | "yes" | "y" | "on")) => Self::QuietMode(Some(true)),
+            ("quiet", Some("false" | "f" | "no" | "n" | "off")) => Self::QuietMode(Some(false)),
             ("quiet", None) => Self::QuietMode(None),
-            ("pset", Some(subcommand)) => {
-                Self::OutputFormat(Some(subcommand.to_string()))
-            }
+            ("pset", Some(subcommand)) => Self::OutputFormat(Some(subcommand.to_string())),
             ("pset", None) => Self::OutputFormat(None),
             _ => return Err(()),
         })

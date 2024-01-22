@@ -33,8 +33,8 @@ use ballista_core::execution_plans::{ShuffleWriterExec, UnresolvedShuffleExec};
 use ballista_core::serde::protobuf::failed_task::FailedReason;
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::{
-    self, execution_graph_stage::StageType, FailedTask, JobStatus, ResultLost,
-    RunningJob, SuccessfulJob, TaskStatus,
+    self, execution_graph_stage::StageType, FailedTask, JobStatus, ResultLost, RunningJob,
+    SuccessfulJob, TaskStatus,
 };
 use ballista_core::serde::protobuf::{job_status, FailedJob, ShuffleWritePartition};
 use ballista_core::serde::protobuf::{task_status, RunningTask};
@@ -286,22 +286,19 @@ impl ExecutionGraph {
         // It will be refined later
         self.revive();
 
-        let current_running_stages: HashSet<usize> =
-            HashSet::from_iter(self.running_stages());
+        let current_running_stages: HashSet<usize> = HashSet::from_iter(self.running_stages());
 
         // Copy the failed stage attempts from self
         let mut failed_stage_attempts: HashMap<usize, HashSet<usize>> = HashMap::new();
         for (stage_id, attempts) in self.failed_stage_attempts.iter() {
-            failed_stage_attempts
-                .insert(*stage_id, HashSet::from_iter(attempts.iter().copied()));
+            failed_stage_attempts.insert(*stage_id, HashSet::from_iter(attempts.iter().copied()));
         }
 
         let mut resolved_stages = HashSet::new();
         let mut successful_stages = HashSet::new();
         let mut failed_stages = HashMap::new();
         let mut rollback_running_stages = HashMap::new();
-        let mut resubmit_successful_stages: HashMap<usize, HashSet<usize>> =
-            HashMap::new();
+        let mut resubmit_successful_stages: HashMap<usize, HashSet<usize>> = HashMap::new();
         let mut reset_running_stages: HashMap<usize, HashSet<usize>> = HashMap::new();
 
         for (stage_id, stage_task_statuses) in job_task_statuses {
@@ -309,8 +306,7 @@ impl ExecutionGraph {
                 if let ExecutionStage::Running(running_stage) = stage {
                     let mut locations = vec![];
                     for task_status in stage_task_statuses.into_iter() {
-                        let task_stage_attempt_num =
-                            task_status.stage_attempt_num as usize;
+                        let task_stage_attempt_num = task_status.stage_attempt_num as usize;
                         if task_stage_attempt_num < running_stage.stage_attempt_num {
                             warn!("Ignore TaskStatus update with TID {} as it's from Stage {}.{} and there is a more recent stage attempt {}.{} running",
                                     task_status.task_id, stage_id, task_stage_attempt_num, stage_id, running_stage.stage_attempt_num);
@@ -327,33 +323,24 @@ impl ExecutionGraph {
                         );
                         let operator_metrics = task_status.metrics.clone();
 
-                        if !running_stage
-                            .update_task_info(partition_id, task_status.clone())
-                        {
+                        if !running_stage.update_task_info(partition_id, task_status.clone()) {
                             continue;
                         }
 
-                        if let Some(task_status::Status::Failed(failed_task)) =
-                            task_status.status
-                        {
+                        if let Some(task_status::Status::Failed(failed_task)) = task_status.status {
                             let failed_reason = failed_task.failed_reason;
 
                             match failed_reason {
-                                Some(FailedReason::FetchPartitionError(
-                                    fetch_partiton_error,
-                                )) => {
-                                    let failed_attempts = failed_stage_attempts
-                                        .entry(stage_id)
-                                        .or_default();
+                                Some(FailedReason::FetchPartitionError(fetch_partiton_error)) => {
+                                    let failed_attempts =
+                                        failed_stage_attempts.entry(stage_id).or_default();
                                     failed_attempts.insert(task_stage_attempt_num);
                                     if failed_attempts.len() < max_stage_failures {
                                         let map_stage_id =
                                             fetch_partiton_error.map_stage_id as usize;
-                                        let map_partition_id = fetch_partiton_error
-                                            .map_partition_id
-                                            as usize;
-                                        let executor_id =
-                                            fetch_partiton_error.executor_id;
+                                        let map_partition_id =
+                                            fetch_partiton_error.map_partition_id as usize;
+                                        let executor_id = fetch_partiton_error.executor_id;
 
                                         if !failed_stages.is_empty() {
                                             let error_msg = format!(
@@ -378,10 +365,9 @@ impl ExecutionGraph {
                                                 .or_insert_with(HashSet::new);
                                             failure_reasons.insert(executor_id);
 
-                                            let missing_inputs =
-                                                resubmit_successful_stages
-                                                    .entry(map_stage_id)
-                                                    .or_default();
+                                            let missing_inputs = resubmit_successful_stages
+                                                .entry(map_stage_id)
+                                                .or_default();
                                             missing_inputs.extend(removed_map_partitions);
                                             warn!("Need to resubmit the current running Stage {} and its map Stage {} due to FetchPartitionError from task {}",
                                                     stage_id, map_stage_id, task_identity)
@@ -390,9 +376,7 @@ impl ExecutionGraph {
                                         let error_msg = format!(
                                             "Stage {} has failed {} times, \
                                             most recent failure reason: {:?}",
-                                            stage_id,
-                                            max_stage_failures,
-                                            failed_task.error
+                                            stage_id, max_stage_failures, failed_task.error
                                         );
                                         error!("{}", error_msg);
                                         failed_stages.insert(stage_id, error_msg);
@@ -402,9 +386,7 @@ impl ExecutionGraph {
                                     failed_stages.insert(stage_id, failed_task.error);
                                 }
                                 Some(_) => {
-                                    if failed_task.retryable
-                                        && failed_task.count_to_failures
-                                    {
+                                    if failed_task.retryable && failed_task.count_to_failures {
                                         if running_stage.task_failure_number(partition_id)
                                             < max_task_failures
                                         {
@@ -432,13 +414,11 @@ impl ExecutionGraph {
                                     failed_stages.insert(stage_id, error_msg);
                                 }
                             }
-                        } else if let Some(task_status::Status::Successful(
-                            successful_task,
-                        )) = task_status.status
+                        } else if let Some(task_status::Status::Successful(successful_task)) =
+                            task_status.status
                         {
                             // update task metrics for successfu task
-                            running_stage
-                                .update_task_metrics(partition_id, operator_metrics)?;
+                            running_stage.update_task_metrics(partition_id, operator_metrics)?;
 
                             locations.append(&mut partition_to_location(
                                 &job_id,
@@ -460,8 +440,7 @@ impl ExecutionGraph {
                     if is_final_successful {
                         successful_stages.insert(stage_id);
                         // if this stage is final successful, we want to combine the stage metrics to plan's metric set and print out the plan
-                        if let Some(stage_metrics) = running_stage.stage_metrics.as_ref()
-                        {
+                        if let Some(stage_metrics) = running_stage.stage_metrics.as_ref() {
                             print_stage_metrics(
                                 &job_id,
                                 stage_id,
@@ -484,8 +463,7 @@ impl ExecutionGraph {
                     );
                 } else if let ExecutionStage::UnResolved(unsolved_stage) = stage {
                     for task_status in stage_task_statuses.into_iter() {
-                        let task_stage_attempt_num =
-                            task_status.stage_attempt_num as usize;
+                        let task_stage_attempt_num = task_status.stage_attempt_num as usize;
                         let partition_id = task_status.clone().partition_id as usize;
                         let task_identity = format!(
                             "TID {} {}/{}.{}/{}",
@@ -497,12 +475,8 @@ impl ExecutionGraph {
                         );
                         let mut should_ignore = true;
                         // handle delayed failed tasks if the stage's next attempt is still in UnResolved status.
-                        if let Some(task_status::Status::Failed(failed_task)) =
-                            task_status.status
-                        {
-                            if unsolved_stage.stage_attempt_num - task_stage_attempt_num
-                                == 1
-                            {
+                        if let Some(task_status::Status::Failed(failed_task)) = task_status.status {
+                            if unsolved_stage.stage_attempt_num - task_stage_attempt_num == 1 {
                                 let failed_reason = failed_task.failed_reason;
                                 match failed_reason {
                                     Some(FailedReason::ExecutionError(_)) => {
@@ -517,23 +491,17 @@ impl ExecutionGraph {
                                         )
                                         && !unsolved_stage
                                             .last_attempt_failure_reasons
-                                            .contains(
-                                                &fetch_partiton_error.executor_id,
-                                            ) =>
+                                            .contains(&fetch_partiton_error.executor_id) =>
                                     {
                                         should_ignore = false;
                                         unsolved_stage
                                             .last_attempt_failure_reasons
-                                            .insert(
-                                                fetch_partiton_error.executor_id.clone(),
-                                            );
+                                            .insert(fetch_partiton_error.executor_id.clone());
                                         let map_stage_id =
                                             fetch_partiton_error.map_stage_id as usize;
-                                        let map_partition_id = fetch_partiton_error
-                                            .map_partition_id
-                                            as usize;
-                                        let executor_id =
-                                            fetch_partiton_error.executor_id;
+                                        let map_partition_id =
+                                            fetch_partiton_error.map_partition_id as usize;
+                                        let executor_id = fetch_partiton_error.executor_id;
                                         let removed_map_partitions = unsolved_stage
                                             .remove_input_partitions(
                                                 map_stage_id,
@@ -541,9 +509,8 @@ impl ExecutionGraph {
                                                 &executor_id,
                                             )?;
 
-                                        let missing_inputs = reset_running_stages
-                                            .entry(map_stage_id)
-                                            .or_default();
+                                        let missing_inputs =
+                                            reset_running_stages.entry(map_stage_id).or_default();
                                         missing_inputs.extend(removed_map_partitions);
                                         warn!("Need to reset the current running Stage {} due to late come FetchPartitionError from its parent stage {} of task {}",
                                                     map_stage_id, stage_id, task_identity);
@@ -569,7 +536,10 @@ impl ExecutionGraph {
                         "Stage {}/{} is not in running when updating the status of tasks {:?}",
                         job_id,
                         stage_id,
-                        stage_task_statuses.into_iter().map(|task_status| task_status.partition_id).collect::<Vec<_>>(),
+                        stage_task_statuses
+                            .into_iter()
+                            .map(|task_status| task_status.partition_id)
+                            .collect::<Vec<_>>(),
                     );
                 }
             } else {
@@ -607,8 +577,8 @@ impl ExecutionGraph {
                 } else {
                     warn!(
                         "Stage {}/{} is not in Successful state when try to resubmit this stage. ",
-                        job_id,
-                        stage_id);
+                        job_id, stage_id
+                    );
                 }
             } else {
                 return Err(BallistaError::Internal(format!(
@@ -632,8 +602,8 @@ impl ExecutionGraph {
                 } else {
                     warn!(
                         "Stage {}/{} is not in Running state when try to reset the running task. ",
-                        job_id,
-                        stage_id);
+                        job_id, stage_id
+                    );
                 }
             } else {
                 return Err(BallistaError::Internal(format!(
@@ -647,10 +617,7 @@ impl ExecutionGraph {
             successful_stages,
             failed_stages,
             rollback_running_stages,
-            resubmit_successful_stages: resubmit_successful_stages
-                .keys()
-                .cloned()
-                .collect(),
+            resubmit_successful_stages: resubmit_successful_stages.keys().cloned().collect(),
         })
     }
 
@@ -674,8 +641,7 @@ impl ExecutionGraph {
 
         // Fail the stage and also abort the job
         for (stage_id, err_msg) in &updated_stages.failed_stages {
-            job_err_msg =
-                format!("Job failed due to stage {stage_id} failed: {err_msg}\n");
+            job_err_msg = format!("Job failed due to stage {stage_id} failed: {err_msg}\n");
         }
 
         let mut events = vec![];
@@ -739,9 +705,7 @@ impl ExecutionGraph {
             for link in output_links.iter() {
                 // If this is an intermediate stage, we need to push its `PartitionLocation`s to the parent stage
                 if let Some(linked_stage) = self.stages.get_mut(link) {
-                    if let ExecutionStage::UnResolved(linked_unresolved_stage) =
-                        linked_stage
-                    {
+                    if let ExecutionStage::UnResolved(linked_unresolved_stage) = linked_stage {
                         linked_unresolved_stage
                             .add_input_partitions(stage_id, locations.clone())?;
 
@@ -792,15 +756,15 @@ impl ExecutionGraph {
                     stage
                         .running_tasks()
                         .into_iter()
-                        .map(|(task_id, stage_id, partition_id, executor_id)| {
-                            RunningTaskInfo {
+                        .map(
+                            |(task_id, stage_id, partition_id, executor_id)| RunningTaskInfo {
                                 task_id,
                                 job_id: self.job_id.clone(),
                                 stage_id,
                                 partition_id,
                                 executor_id,
-                            }
-                        })
+                            },
+                        )
                         .collect::<Vec<RunningTaskInfo>>()
                 } else {
                     vec![]
@@ -829,10 +793,7 @@ impl ExecutionGraph {
     /// available to the scheduler.
     /// If the task is not launched the status must be reset to allow the task to
     /// be scheduled elsewhere.
-    pub fn pop_next_task(
-        &mut self,
-        executor_id: &str,
-    ) -> Result<Option<TaskDescription>> {
+    pub fn pop_next_task(&mut self, executor_id: &str) -> Result<Option<TaskDescription>> {
         if matches!(
             self.status,
             JobStatus {
@@ -1129,10 +1090,8 @@ impl ExecutionGraph {
 
         let mut all_running_tasks = vec![];
         for stage_id in rollback_running_stages.iter() {
-            let tasks = self.rollback_running_stage(
-                *stage_id,
-                HashSet::from([executor_id.to_owned()]),
-            )?;
+            let tasks =
+                self.rollback_running_stage(*stage_id, HashSet::from([executor_id.to_owned()]))?;
             all_running_tasks.extend(tasks);
         }
 
@@ -1337,8 +1296,7 @@ impl ExecutionGraph {
                     (stage.stage_id, ExecutionStage::UnResolved(stage))
                 }
                 StageType::ResolvedStage(stage) => {
-                    let stage: ResolvedStage =
-                        ResolvedStage::decode(stage, codec, session_ctx)?;
+                    let stage: ResolvedStage = ResolvedStage::decode(stage, codec, session_ctx)?;
                     (stage.stage_id, ExecutionStage::Resolved(stage))
                 }
                 StageType::SuccessfulStage(stage) => {
@@ -1347,8 +1305,7 @@ impl ExecutionGraph {
                     (stage.stage_id, ExecutionStage::Successful(stage))
                 }
                 StageType::FailedStage(stage) => {
-                    let stage: FailedStage =
-                        FailedStage::decode(stage, codec, session_ctx)?;
+                    let stage: FailedStage = FailedStage::decode(stage, codec, session_ctx)?;
                     (stage.stage_id, ExecutionStage::Failed(stage))
                 }
             };
@@ -1384,9 +1341,7 @@ impl ExecutionGraph {
             job_name: proto.job_name,
             session_id: proto.session_id,
             status: proto.status.ok_or_else(|| {
-                BallistaError::Internal(
-                    "Invalid Execution Graph: missing job status".to_owned(),
-                )
+                BallistaError::Internal("Invalid Execution Graph: missing job status".to_owned())
             })?,
             queued_at: proto.queued_at,
             start_time: proto.start_time,
@@ -1421,15 +1376,15 @@ impl ExecutionGraph {
                     ExecutionStage::Resolved(stage) => {
                         StageType::ResolvedStage(ResolvedStage::encode(stage, codec)?)
                     }
-                    ExecutionStage::Running(stage) => StageType::ResolvedStage(
-                        ResolvedStage::encode(stage.to_resolved(), codec)?,
-                    ),
+                    ExecutionStage::Running(stage) => {
+                        StageType::ResolvedStage(ResolvedStage::encode(stage.to_resolved(), codec)?)
+                    }
                     ExecutionStage::Successful(stage) => StageType::SuccessfulStage(
                         SuccessfulStage::encode(job_id.clone(), stage, codec)?,
                     ),
-                    ExecutionStage::Failed(stage) => StageType::FailedStage(
-                        FailedStage::encode(job_id.clone(), stage, codec)?,
-                    ),
+                    ExecutionStage::Failed(stage) => {
+                        StageType::FailedStage(FailedStage::encode(job_id.clone(), stage, codec)?)
+                    }
                 };
                 Ok(protobuf::ExecutionGraphStage {
                     stage_type: Some(stage_type),
@@ -1484,8 +1439,15 @@ impl Debug for ExecutionGraph {
             .map(|stage| format!("{stage:?}"))
             .collect::<Vec<String>>()
             .join("");
-        write!(f, "ExecutionGraph[job_id={}, session_id={}, available_tasks={}, is_successful={}]\n{}",
-               self.job_id, self.session_id, self.available_tasks(), self.is_successful(), stages)
+        write!(
+            f,
+            "ExecutionGraph[job_id={}, session_id={}, available_tasks={}, is_successful={}]\n{}",
+            self.job_id,
+            self.session_id,
+            self.available_tasks(),
+            self.is_successful(),
+            stages
+        )
     }
 }
 
@@ -1575,18 +1537,13 @@ impl ExecutionStageBuilder {
 impl ExecutionPlanVisitor for ExecutionStageBuilder {
     type Error = BallistaError;
 
-    fn pre_visit(
-        &mut self,
-        plan: &dyn ExecutionPlan,
-    ) -> std::result::Result<bool, Self::Error> {
+    fn pre_visit(&mut self, plan: &dyn ExecutionPlan) -> std::result::Result<bool, Self::Error> {
         if let Some(shuffle_write) = plan.as_any().downcast_ref::<ShuffleWriterExec>() {
             self.current_stage_id = shuffle_write.stage_id();
         } else if let Some(unresolved_shuffle) =
             plan.as_any().downcast_ref::<UnresolvedShuffleExec>()
         {
-            if let Some(output_links) =
-                self.output_links.get_mut(&unresolved_shuffle.stage_id)
-            {
+            if let Some(output_links) = self.output_links.get_mut(&unresolved_shuffle.stage_id) {
                 if !output_links.contains(&self.current_stage_id) {
                     output_links.push(self.current_stage_id);
                 }
@@ -1688,15 +1645,15 @@ mod test {
     use crate::scheduler_server::event::QueryStageSchedulerEvent;
     use ballista_core::error::Result;
     use ballista_core::serde::protobuf::{
-        self, failed_task, job_status, ExecutionError, FailedTask, FetchPartitionError,
-        IoError, JobStatus, TaskKilled,
+        self, failed_task, job_status, ExecutionError, FailedTask, FetchPartitionError, IoError,
+        JobStatus, TaskKilled,
     };
 
     use crate::state::execution_graph::ExecutionGraph;
     use crate::test_utils::{
         mock_completed_task, mock_executor, mock_failed_task, test_aggregation_plan,
-        test_coalesce_plan, test_join_plan, test_two_aggregations_plan,
-        test_union_all_plan, test_union_plan,
+        test_coalesce_plan, test_join_plan, test_two_aggregations_plan, test_union_all_plan,
+        test_union_plan,
     };
 
     #[tokio::test]
@@ -1963,12 +1920,7 @@ mod test {
             },
         );
 
-        agg_graph.update_task_status(
-            &executor2,
-            vec![task_status1, task_status2],
-            4,
-            4,
-        )?;
+        agg_graph.update_task_status(&executor2, vec![task_status1, task_status2], 4, 4)?;
 
         assert_eq!(agg_graph.available_tasks(), 2);
         drain_tasks(&mut agg_graph)?;
@@ -2011,12 +1963,7 @@ mod test {
             },
         );
 
-        agg_graph.update_task_status(
-            &executor2,
-            vec![task_status1, task_status2],
-            4,
-            4,
-        )?;
+        agg_graph.update_task_status(&executor2, vec![task_status1, task_status2], 4, 4)?;
 
         assert_eq!(agg_graph.available_tasks(), 1);
 
@@ -2036,9 +1983,7 @@ mod test {
                         error: "IOError".to_string(),
                         retryable: true,
                         count_to_failures: true,
-                        failed_reason: Some(failed_task::FailedReason::IoError(
-                            IoError {},
-                        )),
+                        failed_reason: Some(failed_task::FailedReason::IoError(IoError {})),
                     },
                 );
                 agg_graph.update_task_status(&executor2, vec![task_status], 4, 4)?;
@@ -2059,7 +2004,9 @@ mod test {
         assert_eq!(last_attempt, 3);
 
         let failure_reason = format!("{:?}", agg_graph.status);
-        assert!(failure_reason.contains("Task 1 in Stage 2 failed 4 times, fail the stage, most recent failure reason"));
+        assert!(failure_reason.contains(
+            "Task 1 in Stage 2 failed 4 times, fail the stage, most recent failure reason"
+        ));
         assert!(failure_reason.contains("IOError"));
         assert!(!agg_graph.is_successful());
 
@@ -2122,9 +2069,7 @@ mod test {
                 error: "ExecutionError".to_string(),
                 retryable: false,
                 count_to_failures: false,
-                failed_reason: Some(failed_task::FailedReason::ExecutionError(
-                    ExecutionError {},
-                )),
+                failed_reason: Some(failed_task::FailedReason::ExecutionError(ExecutionError {})),
             },
         );
 
@@ -2181,12 +2126,8 @@ mod test {
         }
         assert_eq!(running_task_count, 2);
 
-        let stage_events = agg_graph.update_task_status(
-            &executor2,
-            vec![task_status1, task_status2],
-            4,
-            4,
-        )?;
+        let stage_events =
+            agg_graph.update_task_status(&executor2, vec![task_status1, task_status2], 4, 4)?;
 
         assert_eq!(stage_events.len(), 1);
         assert!(matches!(
@@ -2246,15 +2187,13 @@ mod test {
                         error: "FetchPartitionError".to_string(),
                         retryable: false,
                         count_to_failures: false,
-                        failed_reason: Some(
-                            failed_task::FailedReason::FetchPartitionError(
-                                FetchPartitionError {
-                                    executor_id: executor2.id.clone(),
-                                    map_stage_id: 2,
-                                    map_partition_id: part,
-                                },
-                            ),
-                        ),
+                        failed_reason: Some(failed_task::FailedReason::FetchPartitionError(
+                            FetchPartitionError {
+                                executor_id: executor2.id.clone(),
+                                map_stage_id: 2,
+                                map_partition_id: part,
+                            },
+                        )),
                     },
                 );
                 many_fetch_failure_status.push(task_status);
@@ -2296,15 +2235,13 @@ mod test {
                         error: "FetchPartitionError".to_string(),
                         retryable: false,
                         count_to_failures: false,
-                        failed_reason: Some(
-                            failed_task::FailedReason::FetchPartitionError(
-                                FetchPartitionError {
-                                    executor_id: executor1.id.clone(),
-                                    map_stage_id: 1,
-                                    map_partition_id: 0,
-                                },
-                            ),
-                        ),
+                        failed_reason: Some(failed_task::FailedReason::FetchPartitionError(
+                            FetchPartitionError {
+                                executor_id: executor1.id.clone(),
+                                map_stage_id: 1,
+                                map_partition_id: 0,
+                            },
+                        )),
                     },
                 );
 
@@ -2798,9 +2735,7 @@ mod test {
                 error: "ExecutionError".to_string(),
                 retryable: false,
                 count_to_failures: false,
-                failed_reason: Some(failed_task::FailedReason::ExecutionError(
-                    ExecutionError {},
-                )),
+                failed_reason: Some(failed_task::FailedReason::ExecutionError(ExecutionError {})),
             },
         );
 

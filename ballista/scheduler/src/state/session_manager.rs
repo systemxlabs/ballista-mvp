@@ -33,10 +33,7 @@ impl SessionManager {
         Self { state }
     }
 
-    pub async fn remove_session(
-        &self,
-        session_id: &str,
-    ) -> Result<Option<Arc<SessionContext>>> {
+    pub async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
         self.state.remove_session(session_id).await
     }
 
@@ -48,10 +45,7 @@ impl SessionManager {
         self.state.update_session(session_id, config).await
     }
 
-    pub async fn create_session(
-        &self,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>> {
+    pub async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
         self.state.create_session(config).await
     }
 
@@ -65,8 +59,7 @@ pub fn create_datafusion_context(
     ballista_config: &BallistaConfig,
     session_builder: SessionBuilder,
 ) -> Arc<SessionContext> {
-    let config =
-        SessionConfig::from_string_hash_map(ballista_config.settings().clone()).unwrap();
+    let config = SessionConfig::from_string_hash_map(ballista_config.settings().clone()).unwrap();
     let config = config
         .with_target_partitions(ballista_config.default_shuffle_partitions())
         .with_batch_size(ballista_config.default_batch_size())

@@ -45,11 +45,7 @@ pub struct UnresolvedShuffleExec {
 
 impl UnresolvedShuffleExec {
     /// Create a new UnresolvedShuffleExec
-    pub fn new(
-        stage_id: usize,
-        schema: SchemaRef,
-        output_partition_count: usize,
-    ) -> Self {
+    pub fn new(stage_id: usize, schema: SchemaRef, output_partition_count: usize) -> Self {
         Self {
             stage_id,
             schema,
@@ -59,11 +55,7 @@ impl UnresolvedShuffleExec {
 }
 
 impl DisplayAs for UnresolvedShuffleExec {
-    fn fmt_as(
-        &self,
-        t: DisplayFormatType,
-        f: &mut std::fmt::Formatter,
-    ) -> std::fmt::Result {
+    fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match t {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
                 write!(f, "UnresolvedShuffleExec")
@@ -100,8 +92,7 @@ impl ExecutionPlan for UnresolvedShuffleExec {
         _children: Vec<Arc<dyn ExecutionPlan>>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         Err(DataFusionError::Plan(
-            "Ballista UnresolvedShuffleExec does not support with_new_children()"
-                .to_owned(),
+            "Ballista UnresolvedShuffleExec does not support with_new_children()".to_owned(),
         ))
     }
 

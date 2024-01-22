@@ -22,9 +22,7 @@
 use ballista_core::utils::collect_plan_metrics;
 use datafusion::logical_expr::{StringifiedPlan, ToStringifiedPlan};
 use datafusion::physical_plan::metrics::MetricsSet;
-use datafusion::physical_plan::{
-    accept, DisplayFormatType, ExecutionPlan, ExecutionPlanVisitor,
-};
+use datafusion::physical_plan::{accept, DisplayFormatType, ExecutionPlan, ExecutionPlanVisitor};
 use log::{error, info};
 use std::fmt;
 
@@ -38,13 +36,14 @@ pub fn print_stage_metrics(
     // They are all empty now and need to combine with the stage metrics in the ExecutionStages
     let mut plan_metrics = collect_plan_metrics(plan);
     if plan_metrics.len() == stage_metrics.len() {
-        plan_metrics.iter_mut().zip(stage_metrics).for_each(
-            |(plan_metric, stage_metric)| {
+        plan_metrics
+            .iter_mut()
+            .zip(stage_metrics)
+            .for_each(|(plan_metric, stage_metric)| {
                 stage_metric
                     .iter()
                     .for_each(|s| plan_metric.push(s.clone()));
-            },
-        );
+            });
 
         info!(
             "=== [{}/{}] Stage finished, physical plan with metrics ===\n{}\n",
@@ -123,10 +122,7 @@ struct IndentVisitor<'a, 'b> {
 
 impl<'a, 'b> ExecutionPlanVisitor for IndentVisitor<'a, 'b> {
     type Error = fmt::Error;
-    fn pre_visit(
-        &mut self,
-        plan: &dyn ExecutionPlan,
-    ) -> std::result::Result<bool, Self::Error> {
+    fn pre_visit(&mut self, plan: &dyn ExecutionPlan) -> std::result::Result<bool, Self::Error> {
         write!(self.f, "{:indent$}", "", indent = self.indent * 2)?;
         plan.fmt_as(self.t, self.f)?;
         if let Some(metrics) = self.metrics.get(self.metric_index) {
@@ -151,10 +147,7 @@ impl<'a, 'b> ExecutionPlanVisitor for IndentVisitor<'a, 'b> {
 }
 
 impl<'a> ToStringifiedPlan for DisplayableBallistaExecutionPlan<'a> {
-    fn to_stringified(
-        &self,
-        plan_type: datafusion::logical_expr::PlanType,
-    ) -> StringifiedPlan {
+    fn to_stringified(&self, plan_type: datafusion::logical_expr::PlanType) -> StringifiedPlan {
         StringifiedPlan::new(plan_type, self.indent().to_string())
     }
 }

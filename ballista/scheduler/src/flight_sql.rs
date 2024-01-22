@@ -19,17 +19,16 @@ use arrow_flight::flight_descriptor::DescriptorType;
 use arrow_flight::flight_service_server::FlightService;
 use arrow_flight::sql::server::{FlightSqlService, PeekableFlightDataStream};
 use arrow_flight::sql::{
-    ActionBeginSavepointRequest, ActionBeginSavepointResult,
-    ActionBeginTransactionRequest, ActionBeginTransactionResult,
-    ActionCancelQueryRequest, ActionCancelQueryResult,
+    ActionBeginSavepointRequest, ActionBeginSavepointResult, ActionBeginTransactionRequest,
+    ActionBeginTransactionResult, ActionCancelQueryRequest, ActionCancelQueryResult,
     ActionClosePreparedStatementRequest, ActionCreatePreparedStatementRequest,
     ActionCreatePreparedStatementResult, ActionCreatePreparedSubstraitPlanRequest,
     ActionEndSavepointRequest, ActionEndTransactionRequest, CommandGetCatalogs,
-    CommandGetCrossReference, CommandGetDbSchemas, CommandGetExportedKeys,
-    CommandGetImportedKeys, CommandGetPrimaryKeys, CommandGetSqlInfo,
-    CommandGetTableTypes, CommandGetTables, CommandGetXdbcTypeInfo,
-    CommandPreparedStatementQuery, CommandPreparedStatementUpdate, CommandStatementQuery,
-    CommandStatementSubstraitPlan, CommandStatementUpdate, SqlInfo, TicketStatementQuery,
+    CommandGetCrossReference, CommandGetDbSchemas, CommandGetExportedKeys, CommandGetImportedKeys,
+    CommandGetPrimaryKeys, CommandGetSqlInfo, CommandGetTableTypes, CommandGetTables,
+    CommandGetXdbcTypeInfo, CommandPreparedStatementQuery, CommandPreparedStatementUpdate,
+    CommandStatementQuery, CommandStatementSubstraitPlan, CommandStatementUpdate, SqlInfo,
+    TicketStatementQuery,
 };
 use arrow_flight::{
     Action, FlightData, FlightDescriptor, FlightEndpoint, FlightInfo, HandshakeRequest,
@@ -142,9 +141,7 @@ impl FlightSqlServiceImpl {
             .session_manager
             .create_session(&config)
             .await
-            .map_err(|e| {
-                Status::internal(format!("Failed to create SessionContext: {e:?}"))
-            })?;
+            .map_err(|e| Status::internal(format!("Failed to create SessionContext: {e:?}")))?;
         let handle = Uuid::new_v4();
         self.contexts.insert(handle, ctx);
         Ok(handle)
@@ -246,21 +243,19 @@ impl FlightSqlServiceImpl {
                 ))?
             };
 
-            let (host, port) = match &self
-                .server
-                .state
-                .config
-                .advertise_flight_sql_endpoint
-            {
+            let (host, port) = match &self.server.state.config.advertise_flight_sql_endpoint {
                 Some(endpoint) => {
                     let advertise_endpoint_vec: Vec<&str> = endpoint.split(':').collect();
                     match advertise_endpoint_vec.as_slice() {
-                        [host_ip, port] => {
-                            (String::from(*host_ip), FromStr::from_str(port).expect("Failed to parse port from advertise-endpoint."))
-                        }
-                        _ => {
-                            Err(Status::internal("advertise-endpoint flag has incorrect format. Expected IP:Port".to_string()))?
-                        }
+                        [host_ip, port] => (
+                            String::from(*host_ip),
+                            FromStr::from_str(port)
+                                .expect("Failed to parse port from advertise-endpoint."),
+                        ),
+                        _ => Err(Status::internal(
+                            "advertise-endpoint flag has incorrect format. Expected IP:Port"
+                                .to_string(),
+                        ))?,
                     }
                 }
                 None => (exec_host.clone(), exec_port),
@@ -441,10 +436,8 @@ impl FlightSqlServiceImpl {
 
     async fn record_batch_to_resp(
         rb: RecordBatch,
-    ) -> Result<
-        Response<Pin<Box<dyn Stream<Item = Result<FlightData, Status>> + Send>>>,
-        Status,
-    > {
+    ) -> Result<Response<Pin<Box<dyn Stream<Item = Result<FlightData, Status>> + Send>>>, Status>
+    {
         type FlightResult = Result<FlightData, Status>;
         let (tx, rx): (Sender<FlightResult>, Receiver<FlightResult>) = channel(2);
         let schema = rb.schema();
@@ -563,9 +556,8 @@ impl FlightSqlService for FlightSqlServiceImpl {
         match fp.job_id.as_str() {
             "get_flight_info_table_types" => {
                 debug!("Responding with table types");
-                let rb = FlightSqlServiceImpl::table_types().map_err(|_| {
-                    Status::internal("Error getting table types".to_string())
-                })?;
+                let rb = FlightSqlServiceImpl::table_types()
+                    .map_err(|_| Status::internal("Error getting table types".to_string()))?;
                 let resp = Self::record_batch_to_resp(rb).await?;
                 return Ok(resp);
             }
@@ -583,14 +575,13 @@ impl FlightSqlService for FlightSqlServiceImpl {
         // Proxy the flight
         let addr = format!("http://{}:{}", fp.host, fp.port);
         debug!("Scheduler proxying flight for to {}", addr);
-        let connection =
-            create_grpc_client_connection(addr.clone())
-                .await
-                .map_err(|e| {
-                    Status::internal(format!(
+        let connection = create_grpc_client_connection(addr.clone())
+            .await
+            .map_err(|e| {
+                Status::internal(format!(
                     "Error connecting to Ballista scheduler or executor at {addr}: {e:?}"
                 ))
-                })?;
+            })?;
         let mut flight_client = FlightServiceClient::new(connection);
         let buf = action.encode_to_vec();
         let request = Request::new(Ticket { ticket: buf.into() });

@@ -39,8 +39,8 @@ use datafusion::error::Result;
 use datafusion::physical_plan::expressions::PhysicalSortExpr;
 use datafusion::physical_plan::metrics::{ExecutionPlanMetricsSet, MetricsSet};
 use datafusion::physical_plan::{
-    ColumnStatistics, DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning,
-    RecordBatchStream, SendableRecordBatchStream, Statistics,
+    ColumnStatistics, DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, RecordBatchStream,
+    SendableRecordBatchStream, Statistics,
 };
 use futures::{Stream, StreamExt, TryStreamExt};
 
@@ -86,11 +86,7 @@ impl ShuffleReaderExec {
 }
 
 impl DisplayAs for ShuffleReaderExec {
-    fn fmt_as(
-        &self,
-        t: DisplayFormatType,
-        f: &mut std::fmt::Formatter,
-    ) -> std::fmt::Result {
+    fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match t {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
                 write!(f, "ShuffleReaderExec: partitions={}", self.partition.len())
@@ -160,8 +156,7 @@ impl ExecutionPlan for ShuffleReaderExec {
         // Shuffle partitions for evenly send fetching partition requests to avoid hot executors within multiple tasks
         partition_locations.shuffle(&mut thread_rng());
 
-        let response_receiver =
-            send_fetch_partitions(partition_locations, max_request_num);
+        let response_receiver = send_fetch_partitions(partition_locations, max_request_num);
 
         let result = RecordBatchStreamAdapter::new(
             Arc::new(self.schema.as_ref().clone()),
@@ -222,10 +217,7 @@ impl LocalShuffleStream {
 impl Stream for LocalShuffleStream {
     type Item = Result<RecordBatch>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        _: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Some(batch) = self.reader.next() {
             return Poll::Ready(Some(batch.map_err(|e| e.into())));
         }
@@ -250,9 +242,7 @@ struct AbortableReceiverStream {
 impl AbortableReceiverStream {
     /// Construct a new SendableRecordBatchReceiverStream which will send batches of the specified schema from inner
     pub fn create(
-        rx: tokio::sync::mpsc::Receiver<
-            result::Result<SendableRecordBatchStream, BallistaError>,
-        >,
+        rx: tokio::sync::mpsc::Receiver<result::Result<SendableRecordBatchStream, BallistaError>>,
         join_handles: Vec<JoinHandle<()>>,
     ) -> AbortableReceiverStream {
         let inner = ReceiverStream::new(rx);
@@ -357,9 +347,7 @@ impl PartitionReader for PartitionReaderEnum {
         match self {
             PartitionReaderEnum::FlightRemote => fetch_partition_remote(location).await,
             PartitionReaderEnum::Local => fetch_partition_local(location).await,
-            PartitionReaderEnum::ObjectStoreRemote => {
-                fetch_partition_object_store(location).await
-            }
+            PartitionReaderEnum::ObjectStoreRemote => fetch_partition_object_store(location).await,
         }
     }
 }
@@ -546,11 +534,8 @@ mod tests {
             })
         }
 
-        let shuffle_reader_exec = ShuffleReaderExec::try_new(
-            input_stage_id,
-            vec![partitions],
-            Arc::new(schema),
-        )?;
+        let shuffle_reader_exec =
+            ShuffleReaderExec::try_new(input_stage_id, vec![partitions], Arc::new(schema))?;
         let mut stream = shuffle_reader_exec.execute(0, task_ctx)?;
         let batches = utils::collect_stream(&mut stream).await;
 
@@ -624,8 +609,7 @@ mod tests {
         let schema = get_test_partition_schema();
         let data_array = Int32Array::from(vec![1]);
         let batch =
-            RecordBatch::try_new(Arc::new(schema.clone()), vec![Arc::new(data_array)])
-                .unwrap();
+            RecordBatch::try_new(Arc::new(schema.clone()), vec![Arc::new(data_array)]).unwrap();
         let tmp_dir = tempdir().unwrap();
         let file_path = tmp_dir.path().join("shuffle_data");
         let file = File::create(&file_path).unwrap();
@@ -633,18 +617,13 @@ mod tests {
         writer.write(&batch).unwrap();
         writer.finish().unwrap();
 
-        let partition_locations = get_test_partition_locations(
-            partition_num,
-            file_path.to_str().unwrap().to_string(),
-        );
+        let partition_locations =
+            get_test_partition_locations(partition_num, file_path.to_str().unwrap().to_string());
 
-        let response_receiver =
-            send_fetch_partitions(partition_locations, max_request_num);
+        let response_receiver = send_fetch_partitions(partition_locations, max_request_num);
 
-        let stream = RecordBatchStreamAdapter::new(
-            Arc::new(schema),
-            response_receiver.try_flatten(),
-        );
+        let stream =
+            RecordBatchStreamAdapter::new(Arc::new(schema), response_receiver.try_flatten());
 
         let result = common::collect(Box::pin(stream)).await.unwrap();
         assert_eq!(partition_num, result.len());

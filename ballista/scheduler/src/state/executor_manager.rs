@@ -49,10 +49,7 @@ pub struct ExecutorManager {
 }
 
 impl ExecutorManager {
-    pub(crate) fn new(
-        cluster_state: Arc<dyn ClusterState>,
-        config: Arc<SchedulerConfig>,
-    ) -> Self {
+    pub(crate) fn new(cluster_state: Arc<dyn ClusterState>, config: Arc<SchedulerConfig>) -> Self {
         Self {
             cluster_state,
             config,
@@ -138,11 +135,7 @@ impl ExecutorManager {
     }
 
     /// Send rpc to Executors to clean up the job data by delayed clean_up_interval seconds
-    pub(crate) fn clean_up_job_data_delayed(
-        &self,
-        job_id: String,
-        clean_up_interval: u64,
-    ) {
+    pub(crate) fn clean_up_job_data_delayed(&self, job_id: String, clean_up_interval: u64) {
         if clean_up_interval == 0 {
             info!(
                 "The interval is 0 and the clean up for job data {} will not triggered",
@@ -213,10 +206,7 @@ impl ExecutorManager {
     }
 
     /// Get executor metadata for the provided executor ID. Returns an error if the executor does not exist
-    pub async fn get_executor_metadata(
-        &self,
-        executor_id: &str,
-    ) -> Result<ExecutorMetadata> {
+    pub async fn get_executor_metadata(&self, executor_id: &str) -> Result<ExecutorMetadata> {
         self.cluster_state.get_executor_metadata(executor_id).await
     }
 
@@ -252,11 +242,7 @@ impl ExecutorManager {
     }
 
     /// Remove the executor from the cluster
-    pub async fn remove_executor(
-        &self,
-        executor_id: &str,
-        reason: Option<String>,
-    ) -> Result<()> {
+    pub async fn remove_executor(&self, executor_id: &str, reason: Option<String>) -> Result<()> {
         info!("Removing executor {}: {:?}", executor_id, reason);
         self.cluster_state.remove_executor(executor_id).await
     }
@@ -313,10 +299,7 @@ impl ExecutorManager {
         Ok(())
     }
 
-    pub(crate) async fn save_executor_heartbeat(
-        &self,
-        heartbeat: ExecutorHeartbeat,
-    ) -> Result<()> {
+    pub(crate) async fn save_executor_heartbeat(&self, heartbeat: ExecutorHeartbeat) -> Result<()> {
         self.cluster_state
             .save_executor_heartbeat(heartbeat.clone())
             .await?;
@@ -340,8 +323,7 @@ impl ExecutorManager {
     /// Retrieve the set of all executor IDs where the executor has been observed in the last
     /// `last_seen_ts_threshold` seconds.
     pub(crate) fn get_alive_executors(&self) -> HashSet<String> {
-        let last_seen_ts_threshold =
-            get_time_before(self.config.executor_timeout_seconds);
+        let last_seen_ts_threshold = get_time_before(self.config.executor_timeout_seconds);
         self.cluster_state
             .executor_heartbeats()
             .iter()
@@ -381,13 +363,11 @@ impl ExecutorManager {
                     Some(executor_status::Status::Terminating(_))
                 );
 
-                let grace_period_expired =
-                    heartbeat.timestamp <= termination_wait_threshold;
+                let grace_period_expired = heartbeat.timestamp <= termination_wait_threshold;
 
                 let expired = heartbeat.timestamp <= last_seen_threshold;
 
-                ((terminating && grace_period_expired) || expired)
-                    .then(|| heartbeat.clone())
+                ((terminating && grace_period_expired) || expired).then(|| heartbeat.clone())
             })
             .collect::<Vec<_>>()
     }

@@ -158,10 +158,7 @@ impl<S: JobState> JobStateTest<S> {
     }
 }
 
-pub async fn test_job_lifecycle<S: JobState>(
-    state: S,
-    mut graph: ExecutionGraph,
-) -> Result<()> {
+pub async fn test_job_lifecycle<S: JobState>(state: S, mut graph: ExecutionGraph) -> Result<()> {
     let test = JobStateTest::new(state).await?;
 
     let job_id = graph.job_id().to_string();
@@ -186,10 +183,7 @@ pub async fn test_job_lifecycle<S: JobState>(
     Ok(())
 }
 
-pub async fn test_job_planning_failure<S: JobState>(
-    state: S,
-    graph: ExecutionGraph,
-) -> Result<()> {
+pub async fn test_job_planning_failure<S: JobState>(state: S, graph: ExecutionGraph) -> Result<()> {
     let test = JobStateTest::new(state).await?;
 
     let job_id = graph.job_id().to_string();

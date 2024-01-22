@@ -121,11 +121,7 @@ impl<T: 'static + AsLogicalPlan> DistributedQueryExec<T> {
 }
 
 impl<T: 'static + AsLogicalPlan> DisplayAs for DistributedQueryExec<T> {
-    fn fmt_as(
-        &self,
-        t: DisplayFormatType,
-        f: &mut std::fmt::Formatter,
-    ) -> std::fmt::Result {
+    fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match t {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
                 write!(
@@ -181,13 +177,10 @@ impl<T: 'static + AsLogicalPlan> ExecutionPlan for DistributedQueryExec<T> {
         assert_eq!(0, partition);
 
         let mut buf: Vec<u8> = vec![];
-        let plan_message = T::try_from_logical_plan(
-            &self.plan,
-            self.extension_codec.as_ref(),
-        )
-        .map_err(|e| {
-            DataFusionError::Internal(format!("failed to serialize logical plan: {e:?}"))
-        })?;
+        let plan_message = T::try_from_logical_plan(&self.plan, self.extension_codec.as_ref())
+            .map_err(|e| {
+                DataFusionError::Internal(format!("failed to serialize logical plan: {e:?}"))
+            })?;
         plan_message.try_encode(&mut buf).map_err(|e| {
             DataFusionError::Execution(format!("failed to encode logical plan: {e:?}"))
         })?;
@@ -195,9 +188,7 @@ impl<T: 'static + AsLogicalPlan> ExecutionPlan for DistributedQueryExec<T> {
         let query = ExecuteQueryParams {
             query: Some(Query::LogicalPlan(buf)),
             settings: vec![],
-            optional_session_id: Some(OptionalSessionId::SessionId(
-                self.session_id.clone(),
-            )),
+            optional_session_id: Some(OptionalSessionId::SessionId(self.session_id.clone())),
         };
 
         let stream = futures::stream::once(
@@ -296,8 +287,7 @@ async fn execute_query(
             }
             Some(job_status::Status::Successful(successful)) => {
                 let streams = successful.partition_location.into_iter().map(|p| {
-                    let f = fetch_partition(p)
-                        .map_err(|e| ArrowError::ExternalError(Box::new(e)));
+                    let f = fetch_partition(p).map_err(|e| ArrowError::ExternalError(Box::new(e)));
 
                     futures::stream::once(f).try_flatten()
                 });
@@ -308,15 +298,13 @@ async fn execute_query(
     }
 }
 
-async fn fetch_partition(
-    location: PartitionLocation,
-) -> Result<SendableRecordBatchStream> {
-    let metadata = location.executor_meta.ok_or_else(|| {
-        DataFusionError::Internal("Received empty executor metadata".to_owned())
-    })?;
-    let partition_id = location.partition_id.ok_or_else(|| {
-        DataFusionError::Internal("Received empty partition id".to_owned())
-    })?;
+async fn fetch_partition(location: PartitionLocation) -> Result<SendableRecordBatchStream> {
+    let metadata = location
+        .executor_meta
+        .ok_or_else(|| DataFusionError::Internal("Received empty executor metadata".to_owned()))?;
+    let partition_id = location
+        .partition_id
+        .ok_or_else(|| DataFusionError::Internal("Received empty partition id".to_owned()))?;
     let host = metadata.host.as_str();
     let port = metadata.port as u16;
     let mut ballista_client = BallistaClient::try_new(host, port)

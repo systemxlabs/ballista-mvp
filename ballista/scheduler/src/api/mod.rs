@@ -69,16 +69,13 @@ where
     }
 }
 
-fn map_option_err<T, U: Into<Error>>(
-    err: Option<Result<T, U>>,
-) -> Option<Result<T, Error>> {
+fn map_option_err<T, U: Into<Error>>(err: Option<Result<T, U>>) -> Option<Result<T, Error>> {
     err.map(|e| e.map_err(Into::into))
 }
 
 fn with_data_server<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
     db: SchedulerServer<T, U>,
-) -> impl Filter<Extract = (SchedulerServer<T, U>,), Error = std::convert::Infallible> + Clone
-{
+) -> impl Filter<Extract = (SchedulerServer<T, U>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
 }
 
@@ -110,12 +107,11 @@ pub fn get_routes<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
         .and(with_data_server(scheduler_server.clone()))
         .and_then(|job_id, data_server| handlers::get_job_dot_graph(data_server, job_id));
 
-    let route_query_stage_dot =
-        warp::path!("api" / "job" / String / "stage" / usize / "dot")
-            .and(with_data_server(scheduler_server.clone()))
-            .and_then(|job_id, stage_id, data_server| {
-                handlers::get_query_stage_dot_graph(data_server, job_id, stage_id)
-            });
+    let route_query_stage_dot = warp::path!("api" / "job" / String / "stage" / usize / "dot")
+        .and(with_data_server(scheduler_server.clone()))
+        .and_then(|job_id, stage_id, data_server| {
+            handlers::get_query_stage_dot_graph(data_server, job_id, stage_id)
+        });
 
     let route_job_dot_svg = warp::path!("api" / "job" / String / "dot_svg")
         .and(with_data_server(scheduler_server.clone()))

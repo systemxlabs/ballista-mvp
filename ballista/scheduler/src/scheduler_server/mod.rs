@@ -219,13 +219,16 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
                             .status
                             .as_ref()
                             .and_then(|status| status.status.as_ref()),
-                        Some(ballista_core::serde::protobuf::executor_status::Status::Terminating(_))
+                        Some(
+                            ballista_core::serde::protobuf::executor_status::Status::Terminating(_)
+                        )
                     );
 
                     let stop_reason = if terminating {
                         format!(
-                        "TERMINATING executor {executor_id} heartbeat timed out after {}s", state.config.executor_termination_grace_period,
-                    )
+                            "TERMINATING executor {executor_id} heartbeat timed out after {}s",
+                            state.config.executor_termination_grace_period,
+                        )
                     } else {
                         format!(
                             "ACTIVE executor {executor_id} heartbeat timed out after {}s",
@@ -369,8 +372,7 @@ mod test {
 
         match status.status {
             Some(job_status::Status::Successful(SuccessfulJob {
-                partition_location,
-                ..
+                partition_location, ..
             })) => {
                 assert_eq!(partition_location.len(), 4);
             }
@@ -415,11 +417,9 @@ mod test {
                             error: "ERROR".to_string(),
                             retryable: false,
                             count_to_failures: false,
-                            failed_reason: Some(
-                                failed_task::FailedReason::ExecutionError(
-                                    ExecutionError {},
-                                ),
-                            ),
+                            failed_reason: Some(failed_task::FailedReason::ExecutionError(
+                                ExecutionError {},
+                            )),
                         })),
                     });
                 }

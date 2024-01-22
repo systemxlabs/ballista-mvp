@@ -34,14 +34,12 @@ use ballista_core::serde::protobuf::{
     executor_grpc_server::{ExecutorGrpc, ExecutorGrpcServer},
     executor_metric, executor_status,
     scheduler_grpc_client::SchedulerGrpcClient,
-    CancelTasksParams, CancelTasksResult, ExecutorMetric, ExecutorStatus,
-    HeartBeatParams, LaunchMultiTaskParams, LaunchMultiTaskResult, LaunchTaskParams,
-    LaunchTaskResult, RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult,
-    StopExecutorParams, StopExecutorResult, TaskStatus, UpdateTaskStatusParams,
+    CancelTasksParams, CancelTasksResult, ExecutorMetric, ExecutorStatus, HeartBeatParams,
+    LaunchMultiTaskParams, LaunchMultiTaskResult, LaunchTaskParams, LaunchTaskResult,
+    RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult, StopExecutorParams,
+    StopExecutorResult, TaskStatus, UpdateTaskStatusParams,
 };
-use ballista_core::serde::scheduler::from_proto::{
-    get_task_definition, get_task_definition_vec,
-};
+use ballista_core::serde::scheduler::from_proto::{get_task_definition, get_task_definition_vec};
 use ballista_core::serde::scheduler::PartitionId;
 use ballista_core::serde::scheduler::TaskDefinition;
 use ballista_core::serde::BallistaCodec;
@@ -87,8 +85,7 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
 ) -> Result<ServerHandle, BallistaError> {
     let channel_buf_size = executor.concurrent_tasks * 50;
     let (tx_task, rx_task) = mpsc::channel::<CuratorTaskDefinition>(channel_buf_size);
-    let (tx_task_status, rx_task_status) =
-        mpsc::channel::<CuratorTaskStatus>(channel_buf_size);
+    let (tx_task_status, rx_task_status) = mpsc::channel::<CuratorTaskStatus>(channel_buf_size);
 
     let executor_server = ExecutorServer::new(
         scheduler.clone(),
@@ -112,12 +109,8 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
             BALLISTA_VERSION, addr
         );
         let server = ExecutorGrpcServer::new(executor_server.clone())
-            .max_encoding_message_size(
-                config.grpc_server_max_encoding_message_size as usize,
-            )
-            .max_decoding_message_size(
-                config.grpc_server_max_decoding_message_size as usize,
-            );
+            .max_encoding_message_size(config.grpc_server_max_encoding_message_size as usize)
+            .max_decoding_message_size(config.grpc_server_max_decoding_message_size as usize);
         let mut grpc_shutdown = shutdown_noti.subscribe_for_shutdown();
         tokio::spawn(async move {
             let shutdown_signal = grpc_shutdown.recv();
@@ -330,12 +323,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
         let query_stage_exec = self
             .executor
             .execution_engine
-            .create_query_stage_exec(
-                job_id.clone(),
-                stage_id,
-                plan,
-                &self.executor.work_dir,
-            )
+            .create_query_stage_exec(job_id.clone(), stage_id, plan, &self.executor.work_dir)
             .unwrap();
 
         let task_context = {
@@ -445,11 +433,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> Heartbeater<T, U>
         Self { executor_server }
     }
 
-    fn start(
-        &self,
-        shutdown_noti: &ShutdownNotifier,
-        executor_heartbeat_interval_seconds: u64,
-    ) {
+    fn start(&self, shutdown_noti: &ShutdownNotifier, executor_heartbeat_interval_seconds: u64) {
         let executor_server = self.executor_server.clone();
         let mut heartbeat_shutdown = shutdown_noti.subscribe_for_shutdown();
         let heartbeat_complete = shutdown_noti.shutdown_complete_tx.clone();
@@ -498,8 +482,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
             info!("Starting the task status reporter");
             // As long as the shutdown notification has not been received
             while !tasks_status_shutdown.is_shutdown() {
-                let mut curator_task_status_map: HashMap<String, Vec<TaskStatus>> =
-                    HashMap::new();
+                let mut curator_task_status_map: HashMap<String, Vec<TaskStatus>> = HashMap::new();
                 // First try to fetch task status from the channel in *blocking* mode
                 let maybe_task_status: Option<CuratorTaskStatus> = tokio::select! {
                      task_status = rx_task_status.recv() => task_status,
@@ -550,19 +533,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                         Ok(mut scheduler) => {
                             if let Err(e) = scheduler
                                 .update_task_status(UpdateTaskStatusParams {
-                                    executor_id: executor_server
-                                        .executor
-                                        .metadata
-                                        .id
-                                        .clone(),
+                                    executor_id: executor_server.executor.metadata.id.clone(),
                                     task_status: tasks_status.clone(),
                                 })
                                 .await
                             {
-                                error!(
-                                    "Fail to update tasks {:?} due to {:?}",
-                                    tasks_status, e
-                                );
+                                error!("Fail to update tasks {:?} due to {:?}", tasks_status, e);
                             }
                         }
                         Err(e) => {
@@ -585,10 +561,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
 
             // Use a dedicated executor for CPU bound tasks so that the main tokio
             // executor can still answer requests even when under load
-            let dedicated_executor = DedicatedExecutor::new(
-                "task_runner",
-                executor_server.executor.concurrent_tasks,
-            );
+            let dedicated_executor =
+                DedicatedExecutor::new("task_runner", executor_server.executor.concurrent_tasks);
 
             // As long as the shutdown notification has not been received
             while !task_runner_shutdown.is_shutdown() {

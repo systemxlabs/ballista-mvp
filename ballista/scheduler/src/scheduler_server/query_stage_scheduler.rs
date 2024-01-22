@@ -36,10 +36,7 @@ use crate::scheduler_server::event::QueryStageSchedulerEvent;
 
 use crate::state::SchedulerState;
 
-pub(crate) struct QueryStageScheduler<
-    T: 'static + AsLogicalPlan,
-    U: 'static + AsExecutionPlan,
-> {
+pub(crate) struct QueryStageScheduler<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
     state: Arc<SchedulerState<T, U>>,
     metrics_collector: Arc<dyn SchedulerMetricsCollector>,
     config: Arc<SchedulerConfig>,
@@ -64,8 +61,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> QueryStageSchedul
 }
 
 #[async_trait]
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
-    EventAction<QueryStageSchedulerEvent> for QueryStageScheduler<T, U>
+impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<QueryStageSchedulerEvent>
+    for QueryStageScheduler<T, U>
 {
     fn on_start(&self) {
         info!("Starting QueryStageScheduler");
@@ -203,17 +200,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                     Ok((running_tasks, _pending_tasks)) => {
                         if !running_tasks.is_empty() {
                             event_sender
-                                .post_event(QueryStageSchedulerEvent::CancelTasks(
-                                    running_tasks,
-                                ))
+                                .post_event(QueryStageSchedulerEvent::CancelTasks(running_tasks))
                                 .await?;
                         }
                     }
                     Err(e) => {
-                        error!(
-                            "Fail to invoke abort_job for job {} due to {:?}",
-                            job_id, e
-                        );
+                        error!("Fail to invoke abort_job for job {} due to {:?}", job_id, e);
                     }
                 }
                 self.state.clean_up_failed_job(job_id);
@@ -234,9 +226,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                 match self.state.task_manager.cancel_job(&job_id).await {
                     Ok((running_tasks, _pending_tasks)) => {
                         event_sender
-                            .post_event(QueryStageSchedulerEvent::CancelTasks(
-                                running_tasks,
-                            ))
+                            .post_event(QueryStageSchedulerEvent::CancelTasks(running_tasks))
                             .await?;
                     }
                     Err(e) => {
@@ -300,9 +290,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                         }
                     }
                     Err(e) => {
-                        let msg = format!(
-                            "TaskManager error to handle Executor {executor_id} lost: {e}"
-                        );
+                        let msg =
+                            format!("TaskManager error to handle Executor {executor_id} lost: {e}");
                         error!("{}", msg);
                     }
                 }

@@ -129,10 +129,7 @@ impl<T: Clone> Drop for EventSubscriber<T> {
 impl<T: Clone> Stream for EventSubscriber<T> {
     type Item = T;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
             match self.receiver.try_recv() {
                 Ok(event) => {

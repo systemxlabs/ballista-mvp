@@ -63,14 +63,13 @@ impl BallistaClient {
     pub async fn try_new(host: &str, port: u16) -> Result<Self> {
         let addr = format!("http://{host}:{port}");
         debug!("BallistaClient connecting to {}", addr);
-        let connection =
-            create_grpc_client_connection(addr.clone())
-                .await
-                .map_err(|e| {
-                    BallistaError::GrpcConnectionError(format!(
+        let connection = create_grpc_client_connection(addr.clone())
+            .await
+            .map_err(|e| {
+                BallistaError::GrpcConnectionError(format!(
                     "Error connecting to Ballista scheduler or executor at {addr}: {e:?}"
                 ))
-                })?;
+            })?;
         let flight_client = FlightServiceClient::new(connection);
         debug!("BallistaClient connected OK");
 
@@ -109,10 +108,7 @@ impl BallistaClient {
     }
 
     /// Execute an action and retrieve the results
-    pub async fn execute_action(
-        &mut self,
-        action: &Action,
-    ) -> Result<SendableRecordBatchStream> {
+    pub async fn execute_action(&mut self, action: &Action) -> Result<SendableRecordBatchStream> {
         let serialized_action: protobuf::Action = action.to_owned().try_into()?;
 
         let mut buf: Vec<u8> = Vec::with_capacity(serialized_action.encoded_len());
@@ -127,10 +123,7 @@ impl BallistaClient {
                     "Remote shuffle read fail, retry {} times, sleep {} ms.",
                     i, IO_RETRY_WAIT_TIME_MS
                 );
-                tokio::time::sleep(std::time::Duration::from_millis(
-                    IO_RETRY_WAIT_TIME_MS,
-                ))
-                .await;
+                tokio::time::sleep(std::time::Duration::from_millis(IO_RETRY_WAIT_TIME_MS)).await;
             }
 
             let request = tonic::Request::new(Ticket {
@@ -173,11 +166,8 @@ impl BallistaClient {
                 }
                 Err(e) => {
                     if i == IO_RETRIES_TIMES - 1 || e.code() != Code::Unknown {
-                        return BallistaError::GrpcActionError(format!(
-                            "{:?}",
-                            e.to_string()
-                        ))
-                        .into();
+                        return BallistaError::GrpcActionError(format!("{:?}", e.to_string()))
+                            .into();
                     }
                     continue;
                 }

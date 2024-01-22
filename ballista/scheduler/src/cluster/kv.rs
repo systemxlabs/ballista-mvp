@@ -17,9 +17,8 @@
 
 use crate::cluster::storage::{KeyValueStore, Keyspace, Lock, Operation, WatchEvent};
 use crate::cluster::{
-    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState,
-    ExecutorHeartbeatStream, ExecutorSlot, JobState, JobStateEvent, JobStateEventStream,
-    JobStatus, TaskDistributionPolicy,
+    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorHeartbeatStream,
+    ExecutorSlot, JobState, JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
 };
 use crate::scheduler_server::{timestamp_secs, SessionBuilder};
 use crate::state::execution_graph::ExecutionGraph;
@@ -31,8 +30,8 @@ use ballista_core::config::BallistaConfig;
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::{
-    self, AvailableTaskSlots, ExecutorHeartbeat, ExecutorTaskSlots, FailedJob,
-    KeyValuePair, QueuedJob,
+    self, AvailableTaskSlots, ExecutorHeartbeat, ExecutorTaskSlots, FailedJob, KeyValuePair,
+    QueuedJob,
 };
 use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use ballista_core::serde::BallistaCodec;
@@ -122,9 +121,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
             .filter_map(|event| {
                 futures::future::ready(match event {
                     WatchEvent::Put(_, value) => {
-                        if let Ok(heartbeat) =
-                            decode_protobuf::<ExecutorHeartbeat>(&value)
-                        {
+                        if let Ok(heartbeat) = decode_protobuf::<ExecutorHeartbeat>(&value) {
                             Some(heartbeat)
                         } else {
                             None
@@ -138,8 +135,8 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 }
 
 #[async_trait]
-impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
-    ClusterState for KeyValueState<S, T, U>
+impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ClusterState
+    for KeyValueState<S, T, U>
 {
     /// Initialize a background process that will listen for executor heartbeats and update the in-memory cache
     /// of executor heartbeats
@@ -186,12 +183,11 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         with_lock(lock, async {
             let resources = self.store.get(Keyspace::Slots, "all").await?;
 
-            let mut slots =
-                ExecutorTaskSlots::decode(resources.as_slice()).map_err(|err| {
-                    BallistaError::Internal(format!(
-                        "Unexpected value in executor slots state: {err:?}"
-                    ))
-                })?;
+            let mut slots = ExecutorTaskSlots::decode(resources.as_slice()).map_err(|err| {
+                BallistaError::Internal(format!(
+                    "Unexpected value in executor slots state: {err:?}"
+                ))
+            })?;
 
             let available_slots: Vec<&mut AvailableTaskSlots> = slots
                 .task_slots
@@ -238,12 +234,11 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         with_lock(lock, async {
             let resources = self.store.get(Keyspace::Slots, "all").await?;
 
-            let mut slots =
-                ExecutorTaskSlots::decode(resources.as_slice()).map_err(|err| {
-                    BallistaError::Internal(format!(
-                        "Unexpected value in executor slots state: {err:?}"
-                    ))
-                })?;
+            let mut slots = ExecutorTaskSlots::decode(resources.as_slice()).map_err(|err| {
+                BallistaError::Internal(format!(
+                    "Unexpected value in executor slots state: {err:?}"
+                ))
+            })?;
 
             for executor_slots in slots.task_slots.iter_mut() {
                 if let Some(slots) = increments.get(&executor_slots.executor_id) {
@@ -273,9 +268,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
             timestamp: timestamp_secs(),
             metrics: vec![],
             status: Some(protobuf::ExecutorStatus {
-                status: Some(
-                    protobuf::executor_status::Status::Active(String::default()),
-                ),
+                status: Some(protobuf::executor_status::Status::Active(String::default())),
             }),
         })
         .await?;
@@ -290,8 +283,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         with_lock(lock, async {
             let current_slots = self.store.get(Keyspace::Slots, "all").await?;
 
-            let mut current_slots: ExecutorTaskSlots =
-                decode_protobuf(current_slots.as_slice())?;
+            let mut current_slots: ExecutorTaskSlots = decode_protobuf(current_slots.as_slice())?;
 
             if let Some((idx, _)) = current_slots
                 .task_slots
@@ -338,8 +330,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
             metadata.value().clone()
         } else {
             let value = self.store.get(Keyspace::Executors, executor_id).await?;
-            let decoded =
-                decode_into::<protobuf::ExecutorMetadata, ExecutorMetadata>(&value)?;
+            let decoded = decode_into::<protobuf::ExecutorMetadata, ExecutorMetadata>(&value)?;
             self.executors
                 .insert(executor_id.to_string(), decoded.clone());
 
@@ -415,8 +406,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
     async fn submit_job(&self, job_id: String, graph: &ExecutionGraph) -> Result<()> {
         if self.queued_jobs.get(&job_id).is_some() {
             let status = graph.status();
-            let encoded_graph =
-                ExecutionGraph::encode_execution_graph(graph.clone(), &self.codec)?;
+            let encoded_graph = ExecutionGraph::encode_execution_graph(graph.clone(), &self.codec)?;
 
             self.store
                 .apply_txn(vec![
@@ -477,15 +467,13 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         let session = self.get_session(&proto.session_id).await?;
 
         Ok(Some(
-            ExecutionGraph::decode_execution_graph(proto, &self.codec, session.as_ref())
-                .await?,
+            ExecutionGraph::decode_execution_graph(proto, &self.codec, session.as_ref()).await?,
         ))
     }
 
     async fn save_job(&self, job_id: &str, graph: &ExecutionGraph) -> Result<()> {
         let status = graph.status();
-        let encoded_graph =
-            ExecutionGraph::encode_execution_graph(graph.clone(), &self.codec)?;
+        let encoded_graph = ExecutionGraph::encode_execution_graph(graph.clone(), &self.codec)?;
 
         self.store
             .apply_txn(vec![
@@ -566,9 +554,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                                     status,
                                 }),
                                 Err(err) => {
-                                    warn!(
-                                    "Error decoding job status from watch event: {err:?}"
-                                );
+                                    warn!("Error decoding job status from watch event: {err:?}");
                                     None
                                 }
                             }
@@ -598,10 +584,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         Ok(create_datafusion_context(&config, self.session_builder))
     }
 
-    async fn create_session(
-        &self,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>> {
+    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
         let mut settings: Vec<KeyValuePair> = vec![];
 
         for (key, value) in config.settings() {
@@ -652,10 +635,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         Ok(create_datafusion_context(config, self.session_builder))
     }
 
-    async fn remove_session(
-        &self,
-        session_id: &str,
-    ) -> Result<Option<Arc<SessionContext>>> {
+    async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
         let session_ctx = self.get_session(session_id).await.ok();
 
         self.store.delete(Keyspace::Sessions, session_id).await?;
@@ -676,9 +656,7 @@ mod test {
     use crate::cluster::kv::KeyValueState;
     use crate::cluster::storage::sled::SledClient;
     use crate::cluster::test_util::{test_job_lifecycle, test_job_planning_failure};
-    use crate::test_utils::{
-        test_aggregation_plan, test_join_plan, test_two_aggregations_plan,
-    };
+    use crate::test_utils::{test_aggregation_plan, test_join_plan, test_two_aggregations_plan};
     use ballista_core::error::Result;
     use ballista_core::serde::BallistaCodec;
     use ballista_core::utils::default_session_builder;
@@ -686,21 +664,15 @@ mod test {
     #[tokio::test]
     async fn test_sled_job_lifecycle() -> Result<()> {
         test_job_lifecycle(make_sled_state()?, test_aggregation_plan(4).await).await?;
-        test_job_lifecycle(make_sled_state()?, test_two_aggregations_plan(4).await)
-            .await?;
+        test_job_lifecycle(make_sled_state()?, test_two_aggregations_plan(4).await).await?;
         test_job_lifecycle(make_sled_state()?, test_join_plan(4).await).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_in_memory_job_planning_failure() -> Result<()> {
-        test_job_planning_failure(make_sled_state()?, test_aggregation_plan(4).await)
-            .await?;
-        test_job_planning_failure(
-            make_sled_state()?,
-            test_two_aggregations_plan(4).await,
-        )
-        .await?;
+        test_job_planning_failure(make_sled_state()?, test_aggregation_plan(4).await).await?;
+        test_job_planning_failure(make_sled_state()?, test_two_aggregations_plan(4).await).await?;
         test_job_planning_failure(make_sled_state()?, test_join_plan(4).await).await?;
 
         Ok(())

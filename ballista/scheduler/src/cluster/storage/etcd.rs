@@ -166,12 +166,7 @@ impl KeyValueStore for EtcdClient {
             .map(|_| ())
     }
 
-    async fn mv(
-        &self,
-        from_keyspace: Keyspace,
-        to_keyspace: Keyspace,
-        key: &str,
-    ) -> Result<()> {
+    async fn mv(&self, from_keyspace: Keyspace, to_keyspace: Keyspace, key: &str) -> Result<()> {
         let mut etcd = self.etcd.clone();
         let from_key = format!("/{}/{:?}/{}", self.namespace, from_keyspace, key);
         let to_key = format!("/{}/{:?}/{}", self.namespace, to_keyspace, key);

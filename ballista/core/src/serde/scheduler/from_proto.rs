@@ -19,9 +19,7 @@ use chrono::{TimeZone, Utc};
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
-use datafusion::physical_plan::metrics::{
-    Count, Gauge, MetricValue, MetricsSet, Time, Timestamp,
-};
+use datafusion::physical_plan::metrics::{Count, Gauge, MetricValue, MetricsSet, Time, Timestamp};
 use datafusion::physical_plan::{ExecutionPlan, Metric};
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
@@ -32,8 +30,8 @@ use std::time::Duration;
 
 use crate::error::BallistaError;
 use crate::serde::scheduler::{
-    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId,
-    PartitionLocation, PartitionStats, SimpleFunctionRegistry, TaskDefinition,
+    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation,
+    PartitionStats, SimpleFunctionRegistry, TaskDefinition,
 };
 
 use crate::serde::{protobuf, BallistaCodec};
@@ -254,17 +252,15 @@ impl Into<ExecutorData> for protobuf::ExecutorData {
         };
         for resource in self.resources {
             if let Some(task_slots) = resource.total {
-                if let Some(protobuf::executor_resource::Resource::TaskSlots(
-                    task_slots,
-                )) = task_slots.resource
+                if let Some(protobuf::executor_resource::Resource::TaskSlots(task_slots)) =
+                    task_slots.resource
                 {
                     ret.total_task_slots = task_slots
                 }
             };
             if let Some(task_slots) = resource.available {
-                if let Some(protobuf::executor_resource::Resource::TaskSlots(
-                    task_slots,
-                )) = task_slots.resource
+                if let Some(protobuf::executor_resource::Resource::TaskSlots(task_slots)) =
+                    task_slots.resource
                 {
                     ret.available_task_slots = task_slots
                 }
@@ -340,10 +336,7 @@ pub fn get_task_definition<T: 'static + AsLogicalPlan, U: 'static + AsExecutionP
     })
 }
 
-pub fn get_task_definition_vec<
-    T: 'static + AsLogicalPlan,
-    U: 'static + AsExecutionPlan,
->(
+pub fn get_task_definition_vec<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
     multi_task: protobuf::MultiTaskDefinition,
     runtime: Arc<RuntimeEnv>,
     scalar_functions: HashMap<String, Arc<ScalarUDF>>,

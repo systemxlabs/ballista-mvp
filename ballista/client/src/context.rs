@@ -38,9 +38,7 @@ use datafusion::catalog::TableReference;
 use datafusion::dataframe::DataFrame;
 use datafusion::datasource::{source_as_provider, TableProvider};
 use datafusion::error::{DataFusionError, Result};
-use datafusion::logical_expr::{
-    CreateExternalTable, DdlStatement, LogicalPlan, TableScan,
-};
+use datafusion::logical_expr::{CreateExternalTable, DdlStatement, LogicalPlan, TableScan};
 use datafusion::prelude::{
     AvroReadOptions, CsvReadOptions, ParquetReadOptions, SessionConfig, SessionContext,
 };
@@ -58,11 +56,7 @@ struct BallistaContextState {
 }
 
 impl BallistaContextState {
-    pub fn new(
-        scheduler_host: String,
-        scheduler_port: u16,
-        config: &BallistaConfig,
-    ) -> Self {
+    pub fn new(scheduler_host: String, scheduler_port: u16, config: &BallistaConfig) -> Self {
         Self {
             config: config.clone(),
             scheduler_host,
@@ -90,8 +84,7 @@ impl BallistaContext {
     ) -> ballista_core::error::Result<Self> {
         let state = BallistaContextState::new(host.to_owned(), port, config);
 
-        let scheduler_url =
-            format!("http://{}:{}", &state.scheduler_host, state.scheduler_port);
+        let scheduler_url = format!("http://{}:{}", &state.scheduler_host, state.scheduler_port);
         info!(
             "Connecting to Ballista scheduler at {}",
             scheduler_url.clone()
@@ -169,11 +162,7 @@ impl BallistaContext {
     }
 
     /// Register a DataFrame as a table that can be referenced from a SQL query
-    pub fn register_table(
-        &self,
-        name: &str,
-        table: Arc<dyn TableProvider>,
-    ) -> Result<()> {
+    pub fn register_table(&self, name: &str, table: Arc<dyn TableProvider>) -> Result<()> {
         let mut state = self.state.lock();
         state.tables.insert(name.to_owned(), table);
         Ok(())
@@ -188,9 +177,7 @@ impl BallistaContext {
         let plan = self
             .read_csv(path, options)
             .await
-            .map_err(|e| {
-                DataFusionError::Context(format!("Can't read CSV: {path}"), Box::new(e))
-            })?
+            .map_err(|e| DataFusionError::Context(format!("Can't read CSV: {path}"), Box::new(e)))?
             .into_optimized_plan()?;
         match plan {
             LogicalPlan::TableScan(TableScan { source, .. }) => {
@@ -275,9 +262,8 @@ impl BallistaContext {
         if is_show {
             let state = self.state.lock();
             ctx = Arc::new(SessionContext::new_with_config(
-                SessionConfig::new().with_information_schema(
-                    state.config.default_with_information_schema(),
-                ),
+                SessionConfig::new()
+                    .with_information_schema(state.config.default_with_information_schema()),
             ));
         }
 
@@ -303,19 +289,17 @@ impl BallistaContext {
         let plan = ctx.state().create_logical_plan(sql).await?;
 
         match plan {
-            LogicalPlan::Ddl(DdlStatement::CreateExternalTable(
-                CreateExternalTable {
-                    ref schema,
-                    ref name,
-                    ref location,
-                    ref file_type,
-                    ref has_header,
-                    ref delimiter,
-                    ref table_partition_cols,
-                    ref if_not_exists,
-                    ..
-                },
-            )) => {
+            LogicalPlan::Ddl(DdlStatement::CreateExternalTable(CreateExternalTable {
+                ref schema,
+                ref name,
+                ref location,
+                ref file_type,
+                ref has_header,
+                ref delimiter,
+                ref table_partition_cols,
+                ref if_not_exists,
+                ..
+            })) => {
                 let table_exists = ctx.table_exist(name)?;
                 let schema: SchemaRef = Arc::new(schema.as_ref().to_owned().into());
                 let table_partition_cols = table_partition_cols

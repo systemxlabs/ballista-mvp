@@ -16,16 +16,15 @@
 // under the License.
 
 use crate::cluster::{
-    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorSlot,
-    JobState, JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
+    bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorSlot, JobState,
+    JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
 };
 use crate::state::execution_graph::ExecutionGraph;
 use async_trait::async_trait;
 use ballista_core::config::BallistaConfig;
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::serde::protobuf::{
-    executor_status, AvailableTaskSlots, ExecutorHeartbeat, ExecutorStatus, FailedJob,
-    QueuedJob,
+    executor_status, AvailableTaskSlots, ExecutorHeartbeat, ExecutorStatus, FailedJob, QueuedJob,
 };
 use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use dashmap::DashMap;
@@ -147,9 +146,7 @@ impl ClusterState for InMemoryClusterState {
             .get(executor_id)
             .map(|pair| pair.value().clone())
             .ok_or_else(|| {
-                BallistaError::Internal(format!(
-                    "Not executor with ID {executor_id} found"
-                ))
+                BallistaError::Internal(format!("Not executor with ID {executor_id} found"))
             })
     }
 
@@ -290,9 +287,7 @@ impl JobState for InMemoryJobState {
             self.completed_jobs
                 .insert(job_id.to_string(), (status, Some(graph.clone())));
             self.running_jobs.remove(job_id);
-        } else if let Some(old_status) =
-            self.running_jobs.insert(job_id.to_string(), status)
-        {
+        } else if let Some(old_status) = self.running_jobs.insert(job_id.to_string(), status) {
             self.job_event_sender.send(&JobStateEvent::JobUpdated {
                 job_id: job_id.to_string(),
                 status: old_status,
@@ -306,15 +301,10 @@ impl JobState for InMemoryJobState {
         self.sessions
             .get(session_id)
             .map(|sess| sess.clone())
-            .ok_or_else(|| {
-                BallistaError::General(format!("No session for {session_id} found"))
-            })
+            .ok_or_else(|| BallistaError::General(format!("No session for {session_id} found")))
     }
 
-    async fn create_session(
-        &self,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>> {
+    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
         let session = create_datafusion_context(config, self.session_builder);
         self.sessions.insert(session.session_id(), session.clone());
 
@@ -333,10 +323,7 @@ impl JobState for InMemoryJobState {
         Ok(session)
     }
 
-    async fn remove_session(
-        &self,
-        session_id: &str,
-    ) -> Result<Option<Arc<SessionContext>>> {
+    async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
         Ok(self.sessions.remove(session_id).map(|(_key, value)| value))
     }
 
@@ -402,9 +389,7 @@ impl JobState for InMemoryJobState {
 mod test {
     use crate::cluster::memory::InMemoryJobState;
     use crate::cluster::test_util::{test_job_lifecycle, test_job_planning_failure};
-    use crate::test_utils::{
-        test_aggregation_plan, test_join_plan, test_two_aggregations_plan,
-    };
+    use crate::test_utils::{test_aggregation_plan, test_join_plan, test_two_aggregations_plan};
     use ballista_core::error::Result;
     use ballista_core::utils::default_session_builder;
 

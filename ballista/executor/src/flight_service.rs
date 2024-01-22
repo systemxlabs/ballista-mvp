@@ -31,9 +31,9 @@ use ballista_core::serde::scheduler::Action as BallistaAction;
 
 use arrow::ipc::writer::IpcWriteOptions;
 use arrow_flight::{
-    flight_service_server::FlightService, Action, ActionType, Criteria, Empty,
-    FlightData, FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse,
-    PutResult, SchemaResult, Ticket,
+    flight_service_server::FlightService, Action, ActionType, Criteria, Empty, FlightData,
+    FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse, PutResult, SchemaResult,
+    Ticket,
 };
 use datafusion::arrow::{error::ArrowError, record_batch::RecordBatch};
 use futures::{Stream, StreamExt, TryStreamExt};
@@ -63,8 +63,7 @@ impl Default for BallistaFlightService {
     }
 }
 
-type BoxedFlightStream<T> =
-    Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
+type BoxedFlightStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send + 'static>>;
 
 #[tonic::async_trait]
 impl FlightService for BallistaFlightService {
@@ -82,8 +81,7 @@ impl FlightService for BallistaFlightService {
     ) -> Result<Response<Self::DoGetStream>, Status> {
         let ticket = request.into_inner();
 
-        let action =
-            decode_protobuf(&ticket.ticket).map_err(|e| from_ballista_err(&e))?;
+        let action = decode_protobuf(&ticket.ticket).map_err(|e| from_ballista_err(&e))?;
 
         match &action {
             BallistaAction::FetchPartition { path, .. } => {
@@ -95,8 +93,7 @@ impl FlightService for BallistaFlightService {
                         ))
                     })
                     .map_err(|e| from_ballista_err(&e))?;
-                let reader =
-                    StreamReader::try_new(file, None).map_err(|e| from_arrow_err(&e))?;
+                let reader = StreamReader::try_new(file, None).map_err(|e| from_arrow_err(&e))?;
 
                 let (tx, rx) = channel(2);
                 let schema = reader.schema();
@@ -150,9 +147,8 @@ impl FlightService for BallistaFlightService {
         let result = Ok(result);
         let output = futures::stream::iter(vec![result]);
         let str = format!("Bearer {token}");
-        let mut resp: Response<
-            Pin<Box<dyn Stream<Item = Result<_, Status>> + Send + 'static>>,
-        > = Response::new(Box::pin(output));
+        let mut resp: Response<Pin<Box<dyn Stream<Item = Result<_, Status>> + Send + 'static>>> =
+            Response::new(Box::pin(output));
         let md = MetadataValue::try_from(str)
             .map_err(|_| Status::invalid_argument("authorization not parsable"))?;
         resp.metadata_mut().insert("authorization", md);
@@ -224,9 +220,7 @@ where
                 if let SendError(Err(err)) = err {
                     err
                 } else {
-                    FlightError::Tonic(Status::internal(
-                        "Can't send a batch, something went wrong",
-                    ))
+                    FlightError::Tonic(Status::internal("Can't send a batch, something went wrong"))
                 }
             })?
     }

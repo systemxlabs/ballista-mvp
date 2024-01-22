@@ -86,38 +86,27 @@ pub struct BallistaCluster {
 }
 
 impl BallistaCluster {
-    pub fn new(
-        cluster_state: Arc<dyn ClusterState>,
-        job_state: Arc<dyn JobState>,
-    ) -> Self {
+    pub fn new(cluster_state: Arc<dyn ClusterState>, job_state: Arc<dyn JobState>) -> Self {
         Self {
             cluster_state,
             job_state,
         }
     }
 
-    pub fn new_memory(
-        scheduler: impl Into<String>,
-        session_builder: SessionBuilder,
-    ) -> Self {
+    pub fn new_memory(scheduler: impl Into<String>, session_builder: SessionBuilder) -> Self {
         Self {
             cluster_state: Arc::new(InMemoryClusterState::default()),
             job_state: Arc::new(InMemoryJobState::new(scheduler, session_builder)),
         }
     }
 
-    pub fn new_kv<
-        S: KeyValueStore,
-        T: 'static + AsLogicalPlan,
-        U: 'static + AsExecutionPlan,
-    >(
+    pub fn new_kv<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
         store: S,
         scheduler: impl Into<String>,
         session_builder: SessionBuilder,
         codec: BallistaCodec<T, U>,
     ) -> Self {
-        let kv_state =
-            Arc::new(KeyValueState::new(scheduler, store, codec, session_builder));
+        let kv_state = Arc::new(KeyValueState::new(scheduler, store, codec, session_builder));
         Self {
             cluster_state: kv_state.clone(),
             job_state: kv_state,
@@ -132,9 +121,7 @@ impl BallistaCluster {
                 let etcd = etcd_client::Client::connect(urls.as_slice(), None)
                     .await
                     .map_err(|err| {
-                        BallistaError::Internal(format!(
-                            "Could not connect to etcd: {err:?}"
-                        ))
+                        BallistaError::Internal(format!("Could not connect to etcd: {err:?}"))
                     })?;
 
                 Ok(Self::new_kv(
@@ -220,11 +207,8 @@ pub trait ClusterState: Send + Sync + 'static {
     async fn unbind_tasks(&self, executor_slots: Vec<ExecutorSlot>) -> Result<()>;
 
     /// Register a new executor in the cluster.
-    async fn register_executor(
-        &self,
-        metadata: ExecutorMetadata,
-        spec: ExecutorData,
-    ) -> Result<()>;
+    async fn register_executor(&self, metadata: ExecutorMetadata, spec: ExecutorData)
+        -> Result<()>;
 
     /// Save the executor metadata. This will overwrite existing metadata for the executor ID
     async fn save_executor_metadata(&self, metadata: ExecutorMetadata) -> Result<()>;
@@ -340,10 +324,7 @@ pub trait JobState: Send + Sync {
     async fn get_session(&self, session_id: &str) -> Result<Arc<SessionContext>>;
 
     /// Create a new saved session
-    async fn create_session(
-        &self,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>>;
+    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>>;
 
     // Update a new saved session. If the session does not exist, a new one will be created
     async fn update_session(
@@ -352,10 +333,7 @@ pub trait JobState: Send + Sync {
         config: &BallistaConfig,
     ) -> Result<Arc<SessionContext>>;
 
-    async fn remove_session(
-        &self,
-        session_id: &str,
-    ) -> Result<Option<Arc<SessionContext>>>;
+    async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>>;
 }
 
 pub(crate) async fn bind_task_bias(
@@ -387,9 +365,7 @@ pub(crate) async fn bind_task_bias(
         let mut graph = job_info.execution_graph.write().await;
         let session_id = graph.session_id().to_string();
         let mut black_list = vec![];
-        while let Some((running_stage, task_id_gen)) =
-            graph.fetch_running_stage(&black_list)
-        {
+        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage(&black_list) {
             if if_skip(running_stage.plan.clone()) {
                 info!(
                     "Will skip stage {}/{} for bias task binding",
@@ -474,9 +450,7 @@ pub(crate) async fn bind_task_round_robin(
         let mut graph = job_info.execution_graph.write().await;
         let session_id = graph.session_id().to_string();
         let mut black_list = vec![];
-        while let Some((running_stage, task_id_gen)) =
-            graph.fetch_running_stage(&black_list)
-        {
+        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage(&black_list) {
             if if_skip(running_stage.plan.clone()) {
                 info!(
                     "Will skip stage {}/{} for round robin task binding",
@@ -615,8 +589,7 @@ mod test {
             available_slots.iter_mut().collect();
 
         let bound_tasks =
-            bind_task_round_robin(available_slots_ref, Arc::new(active_jobs), |_| false)
-                .await;
+            bind_task_round_robin(available_slots_ref, Arc::new(active_jobs), |_| false).await;
         assert_eq!(9, bound_tasks.len());
 
         let result = get_result(bound_tasks);
@@ -665,9 +638,7 @@ mod test {
         Ok(())
     }
 
-    fn get_result(
-        bound_tasks: Vec<BoundTask>,
-    ) -> HashMap<String, HashMap<String, usize>> {
+    fn get_result(bound_tasks: Vec<BoundTask>) -> HashMap<String, HashMap<String, usize>> {
         let mut result = HashMap::new();
 
         for bound_task in bound_tasks {
@@ -681,9 +652,7 @@ mod test {
         result
     }
 
-    async fn mock_active_jobs(
-        num_partition: usize,
-    ) -> Result<HashMap<String, JobInfoCache>> {
+    async fn mock_active_jobs(num_partition: usize) -> Result<HashMap<String, JobInfoCache>> {
         let graph_a = mock_graph("job_a", num_partition, 2).await?;
 
         let graph_b = mock_graph("job_b", num_partition, 7).await?;

@@ -36,8 +36,8 @@ use ballista_core::error::{BallistaError, Result};
 use ballista_core::execution_plans::ShuffleWriterExec;
 use ballista_core::serde::protobuf::failed_task::FailedReason;
 use ballista_core::serde::protobuf::{
-    self, task_info, FailedTask, GraphStageInput, OperatorMetricsSet, ResultLost,
-    SuccessfulTask, TaskStatus,
+    self, task_info, FailedTask, GraphStageInput, OperatorMetricsSet, ResultLost, SuccessfulTask,
+    TaskStatus,
 };
 use ballista_core::serde::protobuf::{task_status, RunningTask};
 use ballista_core::serde::scheduler::PartitionLocation;
@@ -278,7 +278,10 @@ impl UnresolvedStage {
                 stage_inputs.add_partition(partition);
             }
         } else {
-            return Err(BallistaError::Internal(format!("Error adding input partitions to stage {}, {} is not a valid child stage ID", self.stage_id, stage_id)));
+            return Err(BallistaError::Internal(format!(
+                "Error adding input partitions to stage {}, {} is not a valid child stage ID",
+                self.stage_id, stage_id
+            )));
         }
 
         Ok(())
@@ -309,7 +312,10 @@ impl UnresolvedStage {
             stage_output.complete = false;
             Ok(bad_map_partitions)
         } else {
-            Err(BallistaError::Internal(format!("Error remove input partition for Stage {}, {} is not a valid child stage ID", self.stage_id, input_stage_id)))
+            Err(BallistaError::Internal(format!(
+                "Error remove input partition for Stage {}, {} is not a valid child stage ID",
+                self.stage_id, input_stage_id
+            )))
         }
     }
 
@@ -333,18 +339,14 @@ impl UnresolvedStage {
             .iter()
             .map(|(stage, input)| (*stage, input.partition_locations.clone()))
             .collect();
-        let plan = crate::planner::remove_unresolved_shuffles(
-            self.plan.clone(),
-            &input_locations,
-        )?;
+        let plan = crate::planner::remove_unresolved_shuffles(self.plan.clone(), &input_locations)?;
 
         // Optimize join order and statistics based on new resolved statistics
         let optimize_join = JoinSelection::new();
         let config = SessionConfig::default();
         let plan = optimize_join.optimize(plan, config.options())?;
         let optimize_aggregate = AggregateStatistics::new();
-        let plan =
-            optimize_aggregate.optimize(plan, SessionConfig::default().options())?;
+        let plan = optimize_aggregate.optimize(plan, SessionConfig::default().options())?;
 
         Ok(ResolvedStage::new(
             self.stage_id,
@@ -376,9 +378,7 @@ impl UnresolvedStage {
             output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
             plan,
             inputs,
-            last_attempt_failure_reasons: HashSet::from_iter(
-                stage.last_attempt_failure_reasons,
-            ),
+            last_attempt_failure_reasons: HashSet::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 
@@ -398,9 +398,7 @@ impl UnresolvedStage {
             output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: Vec::from_iter(
-                stage.last_attempt_failure_reasons,
-            ),
+            last_attempt_failure_reasons: Vec::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 }
@@ -491,9 +489,7 @@ impl ResolvedStage {
             output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: HashSet::from_iter(
-                stage.last_attempt_failure_reasons,
-            ),
+            last_attempt_failure_reasons: HashSet::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 
@@ -514,9 +510,7 @@ impl ResolvedStage {
             output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: Vec::from_iter(
-                stage.last_attempt_failure_reasons,
-            ),
+            last_attempt_failure_reasons: Vec::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 }
@@ -668,10 +662,11 @@ impl RunningStage {
             .iter()
             .enumerate()
             .filter_map(|(partition, info)| match info {
-                Some(TaskInfo {task_id,
-                         task_status: task_status::Status::Running(RunningTask { executor_id }), ..}) => {
-                    Some((*task_id, self.stage_id, partition, executor_id.clone()))
-                }
+                Some(TaskInfo {
+                    task_id,
+                    task_status: task_status::Status::Running(RunningTask { executor_id }),
+                    ..
+                }) => Some((*task_id, self.stage_id, partition, executor_id.clone())),
                 _ => None,
             })
             .collect()
@@ -685,11 +680,7 @@ impl RunningStage {
     }
 
     /// Update the TaskInfo for task partition
-    pub(super) fn update_task_info(
-        &mut self,
-        partition_id: usize,
-        status: TaskStatus,
-    ) -> bool {
+    pub(super) fn update_task_info(&mut self, partition_id: usize, status: TaskStatus) -> bool {
         debug!("Updating TaskInfo for partition {}", partition_id);
         let task_info = self.task_infos[partition_id].as_ref().unwrap();
         let task_id = task_info.task_id;
@@ -754,9 +745,7 @@ impl RunningStage {
             combined_metrics
                 .iter_mut()
                 .zip(metrics_values_array)
-                .map(|(first, second)| {
-                    Self::combine_metrics_set(first, second, partition)
-                })
+                .map(|(first, second)| Self::combine_metrics_set(first, second, partition))
                 .collect()
         } else {
             metrics
@@ -847,7 +836,10 @@ impl RunningStage {
             stage_output.complete = false;
             Ok(bad_map_partitions)
         } else {
-            Err(BallistaError::Internal(format!("Error remove input partition for Stage {}, {} is not a valid child stage ID", self.stage_id, input_stage_id)))
+            Err(BallistaError::Internal(format!(
+                "Error remove input partition for Stage {}, {} is not a valid child stage ID",
+                self.stage_id, input_stage_id
+            )))
         }
     }
 }
@@ -912,10 +904,7 @@ impl SuccessfulStage {
                 TaskInfo {
                     task_id,
                     scheduled_time,
-                    task_status:
-                        task_status::Status::Successful(SuccessfulTask {
-                            executor_id, ..
-                        }),
+                    task_status: task_status::Status::Successful(SuccessfulTask { executor_id, .. }),
                     ..
                 } if *executor == *executor_id => {
                     *task = TaskInfo {
@@ -1017,11 +1006,8 @@ impl SuccessfulStage {
 
 impl Debug for SuccessfulStage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let plan = DisplayableBallistaExecutionPlan::new(
-            self.plan.as_ref(),
-            &self.stage_metrics,
-        )
-        .indent();
+        let plan =
+            DisplayableBallistaExecutionPlan::new(self.plan.as_ref(), &self.stage_metrics).indent();
 
         write!(
             f,
@@ -1208,9 +1194,7 @@ impl StageOutput {
     }
 }
 
-fn decode_inputs(
-    stage_inputs: Vec<GraphStageInput>,
-) -> Result<HashMap<usize, StageOutput>> {
+fn decode_inputs(stage_inputs: Vec<GraphStageInput>) -> Result<HashMap<usize, StageOutput>> {
     let mut inputs: HashMap<usize, StageOutput> = HashMap::new();
     for input in stage_inputs {
         let stage_id = input.stage_id as usize;
@@ -1240,9 +1224,7 @@ fn decode_inputs(
     Ok(inputs)
 }
 
-fn encode_inputs(
-    stage_inputs: HashMap<usize, StageOutput>,
-) -> Result<Vec<GraphStageInput>> {
+fn encode_inputs(stage_inputs: HashMap<usize, StageOutput>) -> Result<Vec<GraphStageInput>> {
     let mut inputs: Vec<protobuf::GraphStageInput> = vec![];
     for (stage_id, output) in stage_inputs.into_iter() {
         inputs.push(protobuf::GraphStageInput {
@@ -1268,13 +1250,9 @@ fn encode_inputs(
 
 fn decode_taskinfo(task_info: protobuf::TaskInfo) -> TaskInfo {
     let task_info_status = match task_info.status {
-        Some(task_info::Status::Running(running)) => {
-            task_status::Status::Running(running)
-        }
+        Some(task_info::Status::Running(running)) => task_status::Status::Running(running),
         Some(task_info::Status::Failed(failed)) => task_status::Status::Failed(failed),
-        Some(task_info::Status::Successful(success)) => {
-            task_status::Status::Successful(success)
-        }
+        Some(task_info::Status::Successful(success)) => task_status::Status::Successful(success),
         _ => panic!(
             "protobuf::TaskInfo status for task {} should not be none",
             task_info.task_id
@@ -1295,9 +1273,7 @@ fn encode_taskinfo(task_info: TaskInfo, partition_id: usize) -> protobuf::TaskIn
     let task_info_status = match task_info.task_status {
         task_status::Status::Running(running) => task_info::Status::Running(running),
         task_status::Status::Failed(failed) => task_info::Status::Failed(failed),
-        task_status::Status::Successful(success) => {
-            task_info::Status::Successful(success)
-        }
+        task_status::Status::Successful(success) => task_info::Status::Successful(success),
     };
     protobuf::TaskInfo {
         task_id: task_info.task_id as u32,

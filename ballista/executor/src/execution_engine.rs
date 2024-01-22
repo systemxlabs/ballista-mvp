@@ -52,9 +52,7 @@ impl DatafusionExecutionEngine {
         work_dir: &str,
     ) -> Result<Arc<dyn QueryStageExecutor>> {
         // the query plan created by the scheduler always starts with a ShuffleWriterExec
-        let exec = if let Some(shuffle_writer) =
-            plan.as_any().downcast_ref::<ShuffleWriterExec>()
-        {
+        let exec = if let Some(shuffle_writer) = plan.as_any().downcast_ref::<ShuffleWriterExec>() {
             // recreate the shuffle writer with the correct working directory
             ShuffleWriterExec::try_new(
                 job_id,
@@ -65,8 +63,7 @@ impl DatafusionExecutionEngine {
             )
         } else {
             Err(DataFusionError::Internal(
-                "Plan passed to new_query_stage_exec is not a ShuffleWriterExec"
-                    .to_string(),
+                "Plan passed to new_query_stage_exec is not a ShuffleWriterExec".to_string(),
             ))
         }?;
         Ok(Arc::new(DefaultQueryStageExec::new(exec)))

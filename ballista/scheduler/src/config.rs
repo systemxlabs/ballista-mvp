@@ -125,10 +125,7 @@ impl SchedulerConfig {
         self
     }
 
-    pub fn with_advertise_flight_sql_endpoint(
-        mut self,
-        endpoint: Option<String>,
-    ) -> Self {
+    pub fn with_advertise_flight_sql_endpoint(mut self, endpoint: Option<String>) -> Self {
         self.advertise_flight_sql_endpoint = endpoint;
         self
     }

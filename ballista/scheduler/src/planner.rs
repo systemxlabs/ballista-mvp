@@ -29,9 +29,7 @@ use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
 use datafusion::physical_plan::repartition::RepartitionExec;
 use datafusion::physical_plan::sorts::sort_preserving_merge::SortPreservingMergeExec;
 use datafusion::physical_plan::windows::WindowAggExec;
-use datafusion::physical_plan::{
-    with_new_children_if_necessary, ExecutionPlan, Partitioning,
-};
+use datafusion::physical_plan::{with_new_children_if_necessary, ExecutionPlan, Partitioning};
 
 use log::{debug, info};
 
@@ -63,8 +61,7 @@ impl DistributedPlanner {
         execution_plan: Arc<dyn ExecutionPlan>,
     ) -> Result<Vec<Arc<ShuffleWriterExec>>> {
         info!("planning query stages for job {}", job_id);
-        let (new_plan, mut stages) =
-            self.plan_query_stages_internal(job_id, execution_plan)?;
+        let (new_plan, mut stages) = self.plan_query_stages_internal(job_id, execution_plan)?;
         stages.push(create_shuffle_writer(
             job_id,
             self.next_stage_id(),
@@ -100,39 +97,27 @@ impl DistributedPlanner {
             .as_any()
             .downcast_ref::<CoalescePartitionsExec>()
         {
-            let shuffle_writer = create_shuffle_writer(
-                job_id,
-                self.next_stage_id(),
-                children[0].clone(),
-                None,
-            )?;
+            let shuffle_writer =
+                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None)?;
             let unresolved_shuffle = create_unresolved_shuffle(&shuffle_writer);
             stages.push(shuffle_writer);
             Ok((
-                with_new_children_if_necessary(execution_plan, vec![unresolved_shuffle])?
-                    .into(),
+                with_new_children_if_necessary(execution_plan, vec![unresolved_shuffle])?.into(),
                 stages,
             ))
         } else if let Some(_sort_preserving_merge) = execution_plan
             .as_any()
-            .downcast_ref::<SortPreservingMergeExec>(
-        ) {
-            let shuffle_writer = create_shuffle_writer(
-                job_id,
-                self.next_stage_id(),
-                children[0].clone(),
-                None,
-            )?;
+            .downcast_ref::<SortPreservingMergeExec>()
+        {
+            let shuffle_writer =
+                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None)?;
             let unresolved_shuffle = create_unresolved_shuffle(&shuffle_writer);
             stages.push(shuffle_writer);
             Ok((
-                with_new_children_if_necessary(execution_plan, vec![unresolved_shuffle])?
-                    .into(),
+                with_new_children_if_necessary(execution_plan, vec![unresolved_shuffle])?.into(),
                 stages,
             ))
-        } else if let Some(repart) =
-            execution_plan.as_any().downcast_ref::<RepartitionExec>()
-        {
+        } else if let Some(repart) = execution_plan.as_any().downcast_ref::<RepartitionExec>() {
             match repart.output_partitioning() {
                 Partitioning::Hash(_, _) => {
                     let shuffle_writer = create_shuffle_writer(
@@ -150,9 +135,7 @@ impl DistributedPlanner {
                     Ok((children[0].clone(), stages))
                 }
             }
-        } else if let Some(window) =
-            execution_plan.as_any().downcast_ref::<WindowAggExec>()
-        {
+        } else if let Some(window) = execution_plan.as_any().downcast_ref::<WindowAggExec>() {
             Err(BallistaError::NotImplemented(format!(
                 "WindowAggExec with window {window:?}"
             )))
@@ -171,9 +154,7 @@ impl DistributedPlanner {
     }
 }
 
-fn create_unresolved_shuffle(
-    shuffle_writer: &ShuffleWriterExec,
-) -> Arc<UnresolvedShuffleExec> {
+fn create_unresolved_shuffle(shuffle_writer: &ShuffleWriterExec) -> Arc<UnresolvedShuffleExec> {
     Arc::new(UnresolvedShuffleExec::new(
         shuffle_writer.stage_id(),
         shuffle_writer.schema(),
@@ -185,9 +166,7 @@ fn create_unresolved_shuffle(
 pub fn find_unresolved_shuffles(
     plan: &Arc<dyn ExecutionPlan>,
 ) -> Result<Vec<UnresolvedShuffleExec>> {
-    if let Some(unresolved_shuffle) =
-        plan.as_any().downcast_ref::<UnresolvedShuffleExec>()
-    {
+    if let Some(unresolved_shuffle) = plan.as_any().downcast_ref::<UnresolvedShuffleExec>() {
         Ok(vec![unresolved_shuffle.clone()])
     } else {
         Ok(plan
@@ -207,9 +186,7 @@ pub fn remove_unresolved_shuffles(
 ) -> Result<Arc<dyn ExecutionPlan>> {
     let mut new_children: Vec<Arc<dyn ExecutionPlan>> = vec![];
     for child in stage.children() {
-        if let Some(unresolved_shuffle) =
-            child.as_any().downcast_ref::<UnresolvedShuffleExec>()
-        {
+        if let Some(unresolved_shuffle) = child.as_any().downcast_ref::<UnresolvedShuffleExec>() {
             let mut relevant_locations = vec![];
             let p = partition_locations
                 .get(&unresolved_shuffle.stage_id)
@@ -256,14 +233,11 @@ pub fn remove_unresolved_shuffles(
 /// Rollback the ShuffleReaderExec to UnresolvedShuffleExec.
 /// Used when the input stages are finished but some partitions are missing due to executor lost.
 /// The entire stage need to be rolled back and rescheduled.
-pub fn rollback_resolved_shuffles(
-    stage: Arc<dyn ExecutionPlan>,
-) -> Result<Arc<dyn ExecutionPlan>> {
+pub fn rollback_resolved_shuffles(stage: Arc<dyn ExecutionPlan>) -> Result<Arc<dyn ExecutionPlan>> {
     let mut new_children: Vec<Arc<dyn ExecutionPlan>> = vec![];
     for child in stage.children() {
         if let Some(shuffle_reader) = child.as_any().downcast_ref::<ShuffleReaderExec>() {
-            let output_partition_count =
-                shuffle_reader.output_partitioning().partition_count();
+            let output_partition_count = shuffle_reader.output_partitioning().partition_count();
             let stage_id = shuffle_reader.stage_id;
 
             let unresolved_shuffle = Arc::new(UnresolvedShuffleExec::new(
@@ -384,8 +358,7 @@ mod test {
         let coalesce = final_hash.children()[0].clone();
         let coalesce = downcast_exec!(coalesce, CoalesceBatchesExec);
         let unresolved_shuffle = coalesce.children()[0].clone();
-        let unresolved_shuffle =
-            downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
+        let unresolved_shuffle = downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle.stage_id, 1);
         assert_eq!(unresolved_shuffle.output_partition_count, 2);
 
@@ -393,8 +366,7 @@ mod test {
         let stage2 = stages[2].children()[0].clone();
         let merge = downcast_exec!(stage2, SortPreservingMergeExec);
         let unresolved_shuffle = merge.children()[0].clone();
-        let unresolved_shuffle =
-            downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
+        let unresolved_shuffle = downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle.stage_id, 2);
         assert_eq!(unresolved_shuffle.output_partition_count, 2);
 
@@ -546,15 +518,13 @@ order by
         let join_input_1 = join.children()[0].clone();
         // skip CoalesceBatches
         let join_input_1 = join_input_1.children()[0].clone();
-        let unresolved_shuffle_reader_1 =
-            downcast_exec!(join_input_1, UnresolvedShuffleExec);
+        let unresolved_shuffle_reader_1 = downcast_exec!(join_input_1, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle_reader_1.output_partition_count, 2);
 
         let join_input_2 = join.children()[1].clone();
         // skip CoalesceBatches
         let join_input_2 = join_input_2.children()[0].clone();
-        let unresolved_shuffle_reader_2 =
-            downcast_exec!(join_input_2, UnresolvedShuffleExec);
+        let unresolved_shuffle_reader_2 = downcast_exec!(join_input_2, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle_reader_2.output_partition_count, 2);
 
         // final partitioned hash aggregate
@@ -619,8 +589,7 @@ order by
         ctx: &SessionContext,
         plan: Arc<dyn ExecutionPlan>,
     ) -> Result<Arc<dyn ExecutionPlan>, BallistaError> {
-        let codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> =
-            BallistaCodec::default();
+        let codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> = BallistaCodec::default();
         let proto: datafusion_proto::protobuf::PhysicalPlanNode =
             datafusion_proto::protobuf::PhysicalPlanNode::try_from_physical_plan(
                 plan.clone(),

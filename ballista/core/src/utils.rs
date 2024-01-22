@@ -17,9 +17,7 @@
 
 use crate::config::BallistaConfig;
 use crate::error::{BallistaError, Result};
-use crate::execution_plans::{
-    DistributedQueryExec, ShuffleWriterExec, UnresolvedShuffleExec,
-};
+use crate::execution_plans::{DistributedQueryExec, ShuffleWriterExec, UnresolvedShuffleExec};
 use crate::serde::scheduler::PartitionStats;
 
 use async_trait::async_trait;
@@ -30,9 +28,7 @@ use datafusion::arrow::ipc::CompressionType;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::datasource::physical_plan::{CsvExec, ParquetExec};
 use datafusion::error::DataFusionError;
-use datafusion::execution::context::{
-    QueryPlanner, SessionConfig, SessionContext, SessionState,
-};
+use datafusion::execution::context::{QueryPlanner, SessionConfig, SessionContext, SessionState};
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::physical_plan::aggregates::AggregateExec;
@@ -79,11 +75,10 @@ pub async fn write_stream_to_disk(
     let mut num_batches = 0;
     let mut num_bytes = 0;
 
-    let options = IpcWriteOptions::default()
-        .try_with_compression(Some(CompressionType::LZ4_FRAME))?;
+    let options =
+        IpcWriteOptions::default().try_with_compression(Some(CompressionType::LZ4_FRAME))?;
 
-    let mut writer =
-        StreamWriter::try_new_with_options(file, stream.schema().as_ref(), options)?;
+    let mut writer = StreamWriter::try_new_with_options(file, stream.schema().as_ref(), options)?;
 
     while let Some(result) = stream.next().await {
         let batch = result?;
@@ -219,8 +214,7 @@ fn build_exec_plan_diagram(
             }
         } else {
             // relationships within same entity
-            let child_id =
-                build_exec_plan_diagram(w, child.as_ref(), stage_id, id, draw_entity)?;
+            let child_id = build_exec_plan_diagram(w, child.as_ref(), stage_id, id, draw_entity)?;
             if draw_entity {
                 writeln!(
                     w,
@@ -322,9 +316,7 @@ impl<T: 'static + AsLogicalPlan> QueryPlanner for BallistaQueryPlanner<T> {
     }
 }
 
-pub async fn create_grpc_client_connection<D>(
-    dst: D,
-) -> std::result::Result<Channel, Error>
+pub async fn create_grpc_client_connection<D>(dst: D) -> std::result::Result<Channel, Error>
 where
     D: std::convert::TryInto<tonic::transport::Endpoint>,
     D::Error: Into<StdError>,

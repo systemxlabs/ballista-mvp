@@ -81,22 +81,14 @@ pub trait KeyValueStore: Send + Sync + Clone + 'static {
     /// more than one locks has to be acquired.
     async fn apply_txn(&self, ops: Vec<(Operation, Keyspace, String)>) -> Result<()>;
     /// Acquire mutex with specified IDs.
-    async fn acquire_locks(
-        &self,
-        mut ids: Vec<(Keyspace, &str)>,
-    ) -> Result<Vec<Box<dyn Lock>>> {
+    async fn acquire_locks(&self, mut ids: Vec<(Keyspace, &str)>) -> Result<Vec<Box<dyn Lock>>> {
         // We always acquire locks in a specific order to avoid deadlocks.
         ids.sort_by_key(|n| format!("/{:?}/{}", n.0, n.1));
         future::try_join_all(ids.into_iter().map(|(ks, key)| self.lock(ks, key))).await
     }
 
     /// Atomically move the given key from one keyspace to another
-    async fn mv(
-        &self,
-        from_keyspace: Keyspace,
-        to_keyspace: Keyspace,
-        key: &str,
-    ) -> Result<()>;
+    async fn mv(&self, from_keyspace: Keyspace, to_keyspace: Keyspace, key: &str) -> Result<()>;
 
     /// Acquire mutex with specified ID.
     async fn lock(&self, keyspace: Keyspace, key: &str) -> Result<Box<dyn Lock>>;

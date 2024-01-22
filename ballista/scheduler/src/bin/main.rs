@@ -50,8 +50,7 @@ mod config {
 async fn main() -> Result<()> {
     // parse options
     let (opt, _remaining_args) =
-        Config::including_optional_config_files(&["/etc/ballista/scheduler.toml"])
-            .unwrap_or_exit();
+        Config::including_optional_config_files(&["/etc/ballista/scheduler.toml"]).unwrap_or_exit();
 
     if opt.version {
         print_version();

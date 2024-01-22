@@ -21,9 +21,7 @@ use anyhow::Result;
 use std::sync::Arc;
 
 use ballista_core::print_version;
-use ballista_executor::executor_process::{
-    start_executor_process, ExecutorProcessConfig,
-};
+use ballista_executor::executor_process::{start_executor_process, ExecutorProcessConfig};
 use config::prelude::*;
 
 #[macro_use]
@@ -44,8 +42,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 async fn main() -> Result<()> {
     // parse command-line arguments
     let (opt, _remaining_args) =
-        Config::including_optional_config_files(&["/etc/ballista/executor.toml"])
-            .unwrap_or_exit();
+        Config::including_optional_config_files(&["/etc/ballista/executor.toml"]).unwrap_or_exit();
 
     if opt.version {
         print_version();

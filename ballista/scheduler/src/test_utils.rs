@@ -34,12 +34,10 @@ use crate::state::task_manager::TaskLauncher;
 use ballista_core::config::{BallistaConfig, BALLISTA_DEFAULT_SHUFFLE_PARTITIONS};
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::{
-    task_status, FailedTask, JobStatus, MultiTaskDefinition, ShuffleWritePartition,
-    SuccessfulTask, TaskId, TaskStatus,
+    task_status, FailedTask, JobStatus, MultiTaskDefinition, ShuffleWritePartition, SuccessfulTask,
+    TaskId, TaskStatus,
 };
-use ballista_core::serde::scheduler::{
-    ExecutorData, ExecutorMetadata, ExecutorSpecification,
-};
+use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata, ExecutorSpecification};
 use ballista_core::serde::{protobuf, BallistaCodec};
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::common::DataFusionError;
@@ -351,10 +349,7 @@ impl TaskLauncher for VirtualTaskLauncher {
         _executor_manager: &ExecutorManager,
     ) -> Result<()> {
         let virtual_executor = self.executors.get(&executor.id).ok_or_else(|| {
-            BallistaError::Internal(format!(
-                "No virtual executor with ID {} found",
-                executor.id
-            ))
+            BallistaError::Internal(format!("No virtual executor with ID {} found", executor.id))
         })?;
 
         let status = tasks
@@ -365,9 +360,7 @@ impl TaskLauncher for VirtualTaskLauncher {
         self.sender
             .send((executor.id.clone(), status))
             .await
-            .map_err(|e| {
-                BallistaError::Internal(format!("Error sending task status: {e:?}"))
-            })
+            .map_err(|e| BallistaError::Internal(format!("Error sending task status: {e:?}")))
     }
 }
 
@@ -477,12 +470,7 @@ impl SchedulerTest {
             .await
     }
 
-    pub async fn submit(
-        &mut self,
-        job_id: &str,
-        job_name: &str,
-        plan: &LogicalPlan,
-    ) -> Result<()> {
+    pub async fn submit(&mut self, job_id: &str, job_name: &str, plan: &LogicalPlan) -> Result<()> {
         println!("{:?}", self.ballista_config);
         let ctx = self
             .scheduler
@@ -498,10 +486,7 @@ impl SchedulerTest {
         Ok(())
     }
 
-    pub async fn post_scheduler_event(
-        &self,
-        event: QueryStageSchedulerEvent,
-    ) -> Result<()> {
+    pub async fn post_scheduler_event(&self, event: QueryStageSchedulerEvent) -> Result<()> {
         self.scheduler
             .query_stage_event_loop
             .get_sender()?
@@ -555,9 +540,7 @@ impl SchedulerTest {
             }) = status.as_ref()
             {
                 match inner {
-                    Status::Failed(_) | Status::Successful(_) => {
-                        break Ok(status.unwrap())
-                    }
+                    Status::Failed(_) | Status::Successful(_) => break Ok(status.unwrap()),
                     _ => {
                         if time >= timeout_ms {
                             break Ok(status.unwrap());
@@ -590,9 +573,7 @@ impl SchedulerTest {
             }) = status.as_ref()
             {
                 match inner {
-                    Status::Failed(_) | Status::Successful(_) => {
-                        break Ok(status.unwrap())
-                    }
+                    Status::Failed(_) | Status::Successful(_) => break Ok(status.unwrap()),
                     _ => continue,
                 }
             }
@@ -646,9 +627,7 @@ impl SchedulerTest {
             }) = status.as_ref()
             {
                 match inner {
-                    Status::Failed(_) | Status::Successful(_) => {
-                        break Ok(status.unwrap())
-                    }
+                    Status::Failed(_) | Status::Successful(_) => break Ok(status.unwrap()),
                     _ => continue,
                 }
             }
@@ -786,10 +765,7 @@ pub async fn test_aggregation_plan(partition: usize) -> ExecutionGraph {
     test_aggregation_plan_with_job_id(partition, "job").await
 }
 
-pub async fn test_aggregation_plan_with_job_id(
-    partition: usize,
-    job_id: &str,
-) -> ExecutionGraph {
+pub async fn test_aggregation_plan_with_job_id(partition: usize, job_id: &str) -> ExecutionGraph {
     let config = SessionConfig::new().with_target_partitions(partition);
     let ctx = Arc::new(SessionContext::new_with_config(config));
     let session_state = ctx.state();
@@ -928,8 +904,7 @@ pub async fn test_join_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph =
-        ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 
@@ -960,8 +935,7 @@ pub async fn test_union_all_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph =
-        ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 
@@ -992,8 +966,7 @@ pub async fn test_union_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph =
-        ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 
@@ -1020,9 +993,7 @@ pub fn mock_completed_task(task: TaskDescription, executor_id: &str) -> TaskStat
             partition_id: partition_id as u64,
             path: format!(
                 "/{}/{}/{}",
-                task.partition.job_id,
-                task.partition.stage_id,
-                task.partition.partition_id
+                task.partition.job_id, task.partition.stage_id, task.partition.partition_id
             ),
             num_batches: 1,
             num_rows: 1,
@@ -1058,9 +1029,7 @@ pub fn mock_failed_task(task: TaskDescription, failed_task: FailedTask) -> TaskS
             partition_id: partition_id as u64,
             path: format!(
                 "/{}/{}/{}",
-                task.partition.job_id,
-                task.partition.stage_id,
-                task.partition.partition_id
+                task.partition.job_id, task.partition.stage_id, task.partition.partition_id
             ),
             num_batches: 1,
             num_rows: 1,
