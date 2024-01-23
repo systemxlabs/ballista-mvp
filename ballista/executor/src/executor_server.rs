@@ -35,11 +35,11 @@ use ballista_core::serde::protobuf::{
     executor_metric, executor_status,
     scheduler_grpc_client::SchedulerGrpcClient,
     CancelTasksParams, CancelTasksResult, ExecutorMetric, ExecutorStatus, HeartBeatParams,
-    LaunchMultiTaskParams, LaunchMultiTaskResult, LaunchTaskParams, LaunchTaskResult,
-    RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult, StopExecutorParams,
-    StopExecutorResult, TaskStatus, UpdateTaskStatusParams,
+    LaunchMultiTaskParams, LaunchMultiTaskResult, RegisterExecutorParams, RemoveJobDataParams,
+    RemoveJobDataResult, StopExecutorParams, StopExecutorResult, TaskStatus,
+    UpdateTaskStatusParams,
 };
-use ballista_core::serde::scheduler::from_proto::{get_task_definition, get_task_definition_vec};
+use ballista_core::serde::scheduler::from_proto::get_task_definition_vec;
 use ballista_core::serde::scheduler::PartitionId;
 use ballista_core::serde::scheduler::TaskDefinition;
 use ballista_core::serde::BallistaCodec;
@@ -604,35 +604,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorGrpc
     for ExecutorServer<T, U>
 {
-    async fn launch_task(
-        &self,
-        request: Request<LaunchTaskParams>,
-    ) -> Result<Response<LaunchTaskResult>, Status> {
-        let LaunchTaskParams {
-            tasks,
-            scheduler_id,
-        } = request.into_inner();
-        let task_sender = self.executor_env.tx_task.clone();
-        for task in tasks {
-            task_sender
-                .send(CuratorTaskDefinition {
-                    scheduler_id: scheduler_id.clone(),
-                    task: get_task_definition(
-                        task,
-                        self.executor.get_runtime(false),
-                        self.executor.scalar_functions.clone(),
-                        self.executor.aggregate_functions.clone(),
-                        self.executor.window_functions.clone(),
-                        self.codec.clone(),
-                    )
-                    .map_err(|e| Status::invalid_argument(format!("{e}")))?,
-                })
-                .await
-                .unwrap();
-        }
-        Ok(Response::new(LaunchTaskResult { success: true }))
-    }
-
     /// by this interface, it can reduce the deserialization cost for multiple tasks
     /// belong to the same job stage running on the same one executor
     async fn launch_multi_task(

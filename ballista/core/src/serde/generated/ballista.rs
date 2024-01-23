@@ -1077,28 +1077,12 @@ pub struct CleanJobDataParams {
 pub struct CleanJobDataResult {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct LaunchTaskParams {
-    /// Allow to launch a task set to an executor at once
-    #[prost(message, repeated, tag = "1")]
-    pub tasks: ::prost::alloc::vec::Vec<TaskDefinition>,
-    #[prost(string, tag = "2")]
-    pub scheduler_id: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LaunchMultiTaskParams {
     /// Allow to launch a task set to an executor at once
     #[prost(message, repeated, tag = "1")]
     pub multi_tasks: ::prost::alloc::vec::Vec<MultiTaskDefinition>,
     #[prost(string, tag = "2")]
     pub scheduler_id: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct LaunchTaskResult {
-    /// TODO when part of the task set are scheduled successfully
-    #[prost(bool, tag = "1")]
-    pub success: bool,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1618,31 +1602,6 @@ pub mod executor_grpc_client {
         pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
-        }
-        pub async fn launch_task(
-            &mut self,
-            request: impl tonic::IntoRequest<super::LaunchTaskParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::LaunchTaskResult>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ballista.protobuf.ExecutorGrpc/LaunchTask",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("ballista.protobuf.ExecutorGrpc", "LaunchTask"));
-            self.inner.unary(req, path, codec).await
         }
         pub async fn launch_multi_task(
             &mut self,
@@ -2476,13 +2435,6 @@ pub mod executor_grpc_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ExecutorGrpcServer.
     #[async_trait]
     pub trait ExecutorGrpc: Send + Sync + 'static {
-        async fn launch_task(
-            &self,
-            request: tonic::Request<super::LaunchTaskParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::LaunchTaskResult>,
-            tonic::Status,
-        >;
         async fn launch_multi_task(
             &self,
             request: tonic::Request<super::LaunchMultiTaskParams>,
@@ -2591,52 +2543,6 @@ pub mod executor_grpc_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ballista.protobuf.ExecutorGrpc/LaunchTask" => {
-                    #[allow(non_camel_case_types)]
-                    struct LaunchTaskSvc<T: ExecutorGrpc>(pub Arc<T>);
-                    impl<
-                        T: ExecutorGrpc,
-                    > tonic::server::UnaryService<super::LaunchTaskParams>
-                    for LaunchTaskSvc<T> {
-                        type Response = super::LaunchTaskResult;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::LaunchTaskParams>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as ExecutorGrpc>::launch_task(&inner, request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = LaunchTaskSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
                 "/ballista.protobuf.ExecutorGrpc/LaunchMultiTask" => {
                     #[allow(non_camel_case_types)]
                     struct LaunchMultiTaskSvc<T: ExecutorGrpc>(pub Arc<T>);
