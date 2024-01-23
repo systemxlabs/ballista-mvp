@@ -635,25 +635,6 @@ impl SchedulerTest {
     }
 }
 
-#[derive(Clone)]
-pub enum MetricEvent {
-    Submitted(String, u64, u64),
-    Completed(String, u64, u64),
-    Cancelled(String),
-    Failed(String, u64, u64),
-}
-
-impl MetricEvent {
-    pub fn job_id(&self) -> &str {
-        match self {
-            MetricEvent::Submitted(job, _, _) => job.as_str(),
-            MetricEvent::Completed(job, _, _) => job.as_str(),
-            MetricEvent::Cancelled(job) => job.as_str(),
-            MetricEvent::Failed(job, _, _) => job.as_str(),
-        }
-    }
-}
-
 pub async fn test_aggregation_plan(partition: usize) -> ExecutionGraph {
     test_aggregation_plan_with_job_id(partition, "job").await
 }
