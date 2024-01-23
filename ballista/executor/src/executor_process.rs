@@ -42,7 +42,7 @@ use ballista_core::serde::protobuf::executor_resource::Resource;
 use ballista_core::serde::protobuf::executor_status::Status;
 use ballista_core::serde::protobuf::{
     scheduler_grpc_client::SchedulerGrpcClient, ExecutorRegistration, ExecutorResource,
-    ExecutorSpecification, ExecutorStatus, ExecutorStoppedParams, HeartBeatParams,
+    ExecutorSpecification, ExecutorStatus, HeartBeatParams,
 };
 use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::{create_grpc_client_connection, create_grpc_server};
@@ -180,7 +180,7 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     // Concurrently run the service checking and listen for the `shutdown` signal and wait for the stop request coming.
     // The check_services runs until an error is encountered, so under normal circumstances, this `select!` statement runs
     // until the `shutdown` signal is received or a stop request is coming.
-    let (notify_scheduler, stop_reason) = tokio::select! {
+    let (notify_scheduler, _stop_reason) = tokio::select! {
         service_val = check_services(&mut service_handlers) => {
             let msg = format!("executor services stopped with reason {service_val:?}");
             info!("{:?}", msg);
@@ -229,17 +229,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
             .await
         {
             error!("error sending heartbeat with fenced status: {:?}", error);
-        }
-
-        // TODO we probably don't need a separate rpc call for this....
-        if let Err(error) = scheduler
-            .executor_stopped(ExecutorStoppedParams {
-                executor_id,
-                reason: stop_reason,
-            })
-            .await
-        {
-            error!("ExecutorStopped grpc failed: {:?}", error);
         }
 
         // Wait for tasks to drain

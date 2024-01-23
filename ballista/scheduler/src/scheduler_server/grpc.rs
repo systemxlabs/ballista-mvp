@@ -24,10 +24,9 @@ use ballista_core::serde::protobuf::{
     execute_query_failure_result, execute_query_result, CancelJobParams, CancelJobResult,
     CleanJobDataParams, CleanJobDataResult, CreateSessionParams, CreateSessionResult,
     ExecuteQueryFailureResult, ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult,
-    ExecutorHeartbeat, ExecutorStoppedParams, ExecutorStoppedResult, GetJobStatusParams,
-    GetJobStatusResult, HeartBeatParams, HeartBeatResult, RegisterExecutorParams,
-    RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult, UpdateSessionParams,
-    UpdateSessionResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
+    ExecutorHeartbeat, GetJobStatusParams, GetJobStatusResult, HeartBeatParams, HeartBeatResult,
+    RegisterExecutorParams, RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult,
+    UpdateSessionParams, UpdateSessionResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
@@ -388,37 +387,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
         }
     }
 
-    async fn executor_stopped(
-        &self,
-        request: Request<ExecutorStoppedParams>,
-    ) -> Result<Response<ExecutorStoppedResult>, Status> {
-        let ExecutorStoppedParams {
-            executor_id,
-            reason,
-        } = request.into_inner();
-        info!(
-            "Received executor stopped request from Executor {} with reason '{}'",
-            executor_id, reason
-        );
-
-        let executor_manager = self.state.executor_manager.clone();
-        let event_sender = self.query_stage_event_loop.get_sender().map_err(|e| {
-            let msg = format!("Get query stage event loop error due to {e:?}");
-            error!("{}", msg);
-            Status::internal(msg)
-        })?;
-
-        Self::remove_executor(
-            executor_manager,
-            event_sender,
-            &executor_id,
-            Some(reason),
-            self.config.executor_termination_grace_period,
-        );
-
-        Ok(Response::new(ExecutorStoppedResult {}))
-    }
-
     async fn cancel_job(
         &self,
         request: Request<CancelJobParams>,
@@ -480,97 +448,15 @@ mod test {
     use crate::config::SchedulerConfig;
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
-        executor_status, ExecutorRegistration, ExecutorStatus, ExecutorStoppedParams,
-        HeartBeatParams, RegisterExecutorParams,
+        executor_status, ExecutorRegistration, ExecutorStatus, HeartBeatParams,
+        RegisterExecutorParams,
     };
     use ballista_core::serde::scheduler::ExecutorSpecification;
     use ballista_core::serde::BallistaCodec;
 
-    use crate::test_utils::await_condition;
     use crate::test_utils::test_cluster_context;
 
     use super::{SchedulerGrpc, SchedulerServer};
-
-    #[tokio::test]
-    async fn test_stop_executor() -> Result<(), BallistaError> {
-        let cluster = test_cluster_context();
-
-        let config = SchedulerConfig::default().with_remove_executor_wait_secs(0);
-        let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new(
-                "localhost:50050".to_owned(),
-                cluster.clone(),
-                BallistaCodec::default(),
-                Arc::new(config),
-            );
-        scheduler.init().await?;
-
-        let exec_meta = ExecutorRegistration {
-            id: "abc".to_owned(),
-            port: 0,
-            grpc_port: 0,
-            specification: Some(ExecutorSpecification { task_slots: 2 }.into()),
-        };
-
-        let request: Request<RegisterExecutorParams> = Request::new(RegisterExecutorParams {
-            metadata: Some(exec_meta.clone()),
-        });
-        let response = scheduler
-            .register_executor(request)
-            .await
-            .expect("Received error response")
-            .into_inner();
-
-        // registration should success
-        assert!(response.success);
-
-        let state = scheduler.state.clone();
-        // executor should be registered
-        let stored_executor = state
-            .executor_manager
-            .get_executor_metadata("abc")
-            .await
-            .expect("getting executor");
-
-        assert_eq!(stored_executor.grpc_port, 0);
-        assert_eq!(stored_executor.port, 0);
-        assert_eq!(stored_executor.specification.task_slots, 2);
-        assert_eq!(stored_executor.host, "localhost".to_owned());
-
-        let request: Request<ExecutorStoppedParams> = Request::new(ExecutorStoppedParams {
-            executor_id: "abc".to_owned(),
-            reason: "test_stop".to_owned(),
-        });
-
-        let _response = scheduler
-            .executor_stopped(request)
-            .await
-            .expect("Received error response")
-            .into_inner();
-
-        // executor should be registered
-        let _stopped_executor = state
-            .executor_manager
-            .get_executor_metadata("abc")
-            .await
-            .expect("getting executor");
-
-        let is_stopped = await_condition(Duration::from_millis(10), 5, || {
-            futures::future::ready(Ok(state.executor_manager.is_dead_executor("abc")))
-        })
-        .await?;
-
-        // executor should be marked to dead
-        assert!(is_stopped, "Executor not marked dead after 50ms");
-
-        let active_executors = state.executor_manager.get_alive_executors();
-        assert!(active_executors.is_empty());
-
-        let expired_executors = state.executor_manager.get_expired_executors();
-        assert!(expired_executors.is_empty());
-
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_register_executor_in_heartbeat_service() -> Result<(), BallistaError> {

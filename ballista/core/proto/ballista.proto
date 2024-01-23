@@ -464,15 +464,6 @@ message StopExecutorParams {
 message StopExecutorResult {
 }
 
-message ExecutorStoppedParams {
-  string executor_id = 1;
-  // stop reason
-  string reason = 2;
-}
-
-message ExecutorStoppedResult {
-}
-
 message UpdateTaskStatusParams {
   string executor_id = 1;
   // All tasks must be reported until they reach the failed or completed state
@@ -658,9 +649,6 @@ service SchedulerGrpc {
   rpc ExecuteQuery (ExecuteQueryParams) returns (ExecuteQueryResult) {}
 
   rpc GetJobStatus (GetJobStatusParams) returns (GetJobStatusResult) {}
-
-  // Used by Executor to tell Scheduler it is stopped.
-  rpc ExecutorStopped (ExecutorStoppedParams) returns (ExecutorStoppedResult) {}
 
   rpc CancelJob (CancelJobParams) returns (CancelJobResult) {}
 
