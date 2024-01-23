@@ -410,7 +410,7 @@ impl SchedulerTest {
         };
 
         let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new_with_task_launcher(
+            SchedulerServer::new(
                 "localhost:50050".to_owned(),
                 cluster,
                 BallistaCodec::default(),

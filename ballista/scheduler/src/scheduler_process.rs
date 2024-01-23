@@ -38,6 +38,7 @@ use crate::cluster::BallistaCluster;
 use crate::config::SchedulerConfig;
 use crate::flight_sql::FlightSqlServiceImpl;
 use crate::scheduler_server::SchedulerServer;
+use crate::state::task_manager::DefaultTaskLauncher;
 
 pub async fn start_server(
     cluster: BallistaCluster,
@@ -56,7 +57,8 @@ pub async fn start_server(
             config.scheduler_name(),
             cluster,
             BallistaCodec::default(),
-            config,
+            config.clone(),
+            Arc::new(DefaultTaskLauncher::new(config.scheduler_name())),
         );
 
     scheduler_server.init().await?;

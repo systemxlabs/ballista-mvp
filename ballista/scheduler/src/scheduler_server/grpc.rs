@@ -401,6 +401,7 @@ mod test {
     use tonic::Request;
 
     use crate::config::SchedulerConfig;
+    use crate::state::task_manager::DefaultTaskLauncher;
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
         executor_status, ExecutorRegistration, ExecutorStatus, HeartBeatParams,
@@ -418,12 +419,14 @@ mod test {
         let cluster = test_cluster_context();
 
         let config = SchedulerConfig::default();
+        let scheduler_name = "localhost:50050".to_owned();
         let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
             SchedulerServer::new(
-                "localhost:50050".to_owned(),
+                scheduler_name.clone(),
                 cluster,
                 BallistaCodec::default(),
                 Arc::new(config),
+                Arc::new(DefaultTaskLauncher::new(scheduler_name)),
             );
         scheduler.init().await?;
 
@@ -469,12 +472,14 @@ mod test {
         let cluster = test_cluster_context();
 
         let config = SchedulerConfig::default();
+        let scheduler_name = "localhost:50050".to_owned();
         let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
             SchedulerServer::new(
-                "localhost:50050".to_owned(),
+                scheduler_name.clone(),
                 cluster.clone(),
                 BallistaCodec::default(),
                 Arc::new(config),
+                Arc::new(DefaultTaskLauncher::new(scheduler_name)),
             );
         scheduler.init().await?;
 

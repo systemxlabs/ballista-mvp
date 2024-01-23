@@ -64,39 +64,9 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
         cluster: BallistaCluster,
         codec: BallistaCodec<T, U>,
         config: Arc<SchedulerConfig>,
-    ) -> Self {
-        let state = Arc::new(SchedulerState::new(
-            cluster,
-            codec,
-            scheduler_name.clone(),
-            config.clone(),
-        ));
-        let query_stage_scheduler =
-            Arc::new(QueryStageScheduler::new(state.clone(), config.clone()));
-        let query_stage_event_loop = EventLoop::new(
-            "query_stage".to_owned(),
-            config.event_loop_buffer_size as usize,
-            query_stage_scheduler.clone(),
-        );
-
-        Self {
-            scheduler_name,
-            start_time: timestamp_millis() as u128,
-            state,
-            query_stage_event_loop,
-            config,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn new_with_task_launcher(
-        scheduler_name: String,
-        cluster: BallistaCluster,
-        codec: BallistaCodec<T, U>,
-        config: Arc<SchedulerConfig>,
         task_launcher: Arc<dyn TaskLauncher>,
     ) -> Self {
-        let state = Arc::new(SchedulerState::new_with_task_launcher(
+        let state = Arc::new(SchedulerState::new(
             cluster,
             codec,
             scheduler_name.clone(),

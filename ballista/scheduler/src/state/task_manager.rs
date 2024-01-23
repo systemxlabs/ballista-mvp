@@ -66,7 +66,7 @@ pub trait TaskLauncher: Send + Sync + 'static {
     ) -> Result<()>;
 }
 
-struct DefaultTaskLauncher {
+pub struct DefaultTaskLauncher {
     scheduler_id: String,
 }
 
@@ -84,23 +84,21 @@ impl TaskLauncher for DefaultTaskLauncher {
         tasks: Vec<MultiTaskDefinition>,
         executor_manager: &ExecutorManager,
     ) -> Result<()> {
-        if log::max_level() >= log::Level::Info {
-            let tasks_ids: Vec<String> = tasks
-                .iter()
-                .map(|task| {
-                    let task_ids: Vec<u32> = task
-                        .task_ids
-                        .iter()
-                        .map(|task_id| task_id.partition_id)
-                        .collect();
-                    format!("{}/{}/{:?}", task.job_id, task.stage_id, task_ids)
-                })
-                .collect();
-            info!(
-                "Launching multi task on executor {:?} for {:?}",
-                executor.id, tasks_ids
-            );
-        }
+        let tasks_ids: Vec<String> = tasks
+            .iter()
+            .map(|task| {
+                let task_ids: Vec<u32> = task
+                    .task_ids
+                    .iter()
+                    .map(|task_id| task_id.partition_id)
+                    .collect();
+                format!("{}/{}/{:?}", task.job_id, task.stage_id, task_ids)
+            })
+            .collect();
+        info!(
+            "Launching multi task on executor {:?} for {:?}",
+            executor.id, tasks_ids
+        );
         executor_manager
             .launch_multi_task(&executor.id, tasks, self.scheduler_id.clone())
             .await?;
@@ -149,18 +147,7 @@ pub struct UpdatedStages {
 }
 
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U> {
-    pub fn new(state: Arc<dyn JobState>, codec: BallistaCodec<T, U>, scheduler_id: String) -> Self {
-        Self {
-            state,
-            codec,
-            scheduler_id: scheduler_id.clone(),
-            active_job_cache: Arc::new(DashMap::new()),
-            launcher: Arc::new(DefaultTaskLauncher::new(scheduler_id)),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn with_launcher(
+    pub fn new(
         state: Arc<dyn JobState>,
         codec: BallistaCodec<T, U>,
         scheduler_id: String,
