@@ -477,8 +477,6 @@ message HeartBeatParams {
 }
 
 message HeartBeatResult {
-  // TODO it's from Spark for BlockManager
-  bool reregister = 1;
 }
 
 message StopExecutorParams {

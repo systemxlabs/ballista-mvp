@@ -150,7 +150,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
                 error!("{}", msg);
                 Status::internal(msg)
             })?;
-        Ok(Response::new(HeartBeatResult { reregister: false }))
+        Ok(Response::new(HeartBeatResult {}))
     }
 
     async fn update_task_status(
