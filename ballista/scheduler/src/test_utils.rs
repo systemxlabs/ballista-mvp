@@ -55,7 +55,6 @@ use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use crate::state::execution_graph::{ExecutionGraph, TaskDescription};
 use ballista_core::utils::default_session_builder;
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
-use parking_lot::Mutex;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub const TPCH_TABLES: &[&str] = &[

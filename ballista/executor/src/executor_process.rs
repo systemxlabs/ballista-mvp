@@ -148,7 +148,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         executor_meta,
         &work_dir,
         runtime,
-        None,
         concurrent_tasks,
     ));
 

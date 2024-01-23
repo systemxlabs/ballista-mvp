@@ -74,11 +74,6 @@ pub struct Executor {
     /// Runtime environment for Executor
     runtime: Arc<RuntimeEnv>,
 
-    /// Runtime environment for Executor with data cache.
-    /// The difference with [`runtime`] is that it leverages a different [`object_store_registry`].
-    /// And others things are shared with [`runtime`].
-    runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
-
     /// Concurrent tasks can run in executor
     pub concurrent_tasks: usize,
 
@@ -96,7 +91,6 @@ impl Executor {
         metadata: ExecutorRegistration,
         work_dir: &str,
         runtime: Arc<RuntimeEnv>,
-        runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
         concurrent_tasks: usize,
     ) -> Self {
         Self {
@@ -107,7 +101,6 @@ impl Executor {
             aggregate_functions: HashMap::new(),
             window_functions: HashMap::new(),
             runtime,
-            runtime_with_data_cache,
             concurrent_tasks,
             abort_handles: Default::default(),
             execution_engine: Arc::new(DatafusionExecutionEngine {}),
@@ -116,16 +109,8 @@ impl Executor {
 }
 
 impl Executor {
-    pub fn get_runtime(&self, data_cache: bool) -> Arc<RuntimeEnv> {
-        if data_cache {
-            if let Some(runtime) = self.runtime_with_data_cache.clone() {
-                runtime
-            } else {
-                self.runtime.clone()
-            }
-        } else {
-            self.runtime.clone()
-        }
+    pub fn get_runtime(&self) -> Arc<RuntimeEnv> {
+        self.runtime.clone()
     }
 
     /// Execute one partition of a query stage and persist the result to disk in IPC format. On
@@ -319,7 +304,7 @@ mod test {
 
         let ctx = SessionContext::new();
 
-        let executor = Executor::new(executor_registration, &work_dir, ctx.runtime_env(), None, 2);
+        let executor = Executor::new(executor_registration, &work_dir, ctx.runtime_env(), 2);
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
 

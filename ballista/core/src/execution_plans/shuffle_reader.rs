@@ -333,8 +333,6 @@ trait PartitionReader: Send + Sync + Clone {
 enum PartitionReaderEnum {
     Local,
     FlightRemote,
-    #[allow(dead_code)]
-    ObjectStoreRemote,
 }
 
 #[async_trait]
@@ -347,7 +345,6 @@ impl PartitionReader for PartitionReaderEnum {
         match self {
             PartitionReaderEnum::FlightRemote => fetch_partition_remote(location).await,
             PartitionReaderEnum::Local => fetch_partition_local(location).await,
-            PartitionReaderEnum::ObjectStoreRemote => fetch_partition_object_store(location).await,
         }
     }
 }
@@ -409,14 +406,6 @@ fn fetch_partition_local_inner(
         BallistaError::General(format!("Failed to new arrow FileReader at {path}: {e:?}"))
     })?;
     Ok(reader)
-}
-
-async fn fetch_partition_object_store(
-    _location: &PartitionLocation,
-) -> result::Result<SendableRecordBatchStream, BallistaError> {
-    Err(BallistaError::NotImplemented(
-        "Should not use ObjectStorePartitionReader".to_string(),
-    ))
 }
 
 #[cfg(test)]
