@@ -291,26 +291,6 @@ pub mod action {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutePartition {
-    #[prost(string, tag = "1")]
-    pub job_id: ::prost::alloc::string::String,
-    #[prost(uint32, tag = "2")]
-    pub stage_id: u32,
-    #[prost(uint32, repeated, tag = "3")]
-    pub partition_id: ::prost::alloc::vec::Vec<u32>,
-    #[prost(message, optional, tag = "4")]
-    pub plan: ::core::option::Option<::datafusion_proto::protobuf::PhysicalPlanNode>,
-    /// The task could need to read partitions from other executors
-    #[prost(message, repeated, tag = "5")]
-    pub partition_location: ::prost::alloc::vec::Vec<PartitionLocation>,
-    /// Output partition for shuffle writer
-    #[prost(message, optional, tag = "6")]
-    pub output_partitioning: ::core::option::Option<
-        ::datafusion_proto::protobuf::PhysicalHashRepartition,
-    >,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FetchPartition {
     #[prost(string, tag = "1")]
     pub job_id: ::prost::alloc::string::String,

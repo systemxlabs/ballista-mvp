@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::{collections::HashMap, fmt, sync::Arc};
 
@@ -23,11 +22,7 @@ use datafusion::arrow::array::{
     ArrayBuilder, StructArray, StructBuilder, UInt64Array, UInt64Builder,
 };
 use datafusion::arrow::datatypes::{DataType, Field};
-use datafusion::common::DataFusionError;
-use datafusion::execution::FunctionRegistry;
-use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use datafusion::physical_plan::ExecutionPlan;
-use datafusion::physical_plan::Partitioning;
 use serde::Serialize;
 
 use crate::error::BallistaError;
@@ -98,11 +93,6 @@ pub struct ExecutorData {
     pub executor_id: String,
     pub total_task_slots: u32,
     pub available_task_slots: u32,
-}
-
-pub struct ExecutorDataChange {
-    pub executor_id: String,
-    pub task_slots: i32,
 }
 
 /// Summary of executed partition
@@ -204,73 +194,6 @@ impl PartitionStats {
     }
 }
 
-/// Task that can be sent to an executor to execute one stage of a query and write
-/// results out to disk
-#[derive(Debug, Clone)]
-pub struct ExecutePartition {
-    /// Unique ID representing this query execution
-    pub job_id: String,
-    /// Unique ID representing this query stage within the overall query
-    pub stage_id: usize,
-    /// The partitions to execute. The same plan could be sent to multiple executors and each
-    /// executor will execute a range of partitions per QueryStageTask
-    pub partition_id: Vec<usize>,
-    /// The physical plan for this query stage
-    pub plan: Arc<dyn ExecutionPlan>,
-    /// Location of shuffle partitions that this query stage may depend on
-    pub shuffle_locations: HashMap<PartitionId, ExecutorMetadata>,
-    /// Output partitioning for shuffle writes
-    pub output_partitioning: Option<Partitioning>,
-}
-
-impl ExecutePartition {
-    pub fn new(
-        job_id: String,
-        stage_id: usize,
-        partition_id: Vec<usize>,
-        plan: Arc<dyn ExecutionPlan>,
-        shuffle_locations: HashMap<PartitionId, ExecutorMetadata>,
-        output_partitioning: Option<Partitioning>,
-    ) -> Self {
-        Self {
-            job_id,
-            stage_id,
-            partition_id,
-            plan,
-            shuffle_locations,
-            output_partitioning,
-        }
-    }
-
-    pub fn key(&self) -> String {
-        format!("{}.{}.{:?}", self.job_id, self.stage_id, self.partition_id)
-    }
-}
-
-#[derive(Debug)]
-pub struct ExecutePartitionResult {
-    /// Path containing results for this partition
-    path: String,
-    stats: PartitionStats,
-}
-
-impl ExecutePartitionResult {
-    pub fn new(path: &str, stats: PartitionStats) -> Self {
-        Self {
-            path: path.to_owned(),
-            stats,
-        }
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn statistics(&self) -> &PartitionStats {
-        &self.stats
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct TaskDefinition {
     pub task_id: usize,
@@ -283,48 +206,4 @@ pub struct TaskDefinition {
     pub launch_time: u64,
     pub session_id: String,
     pub props: Arc<HashMap<String, String>>,
-    pub function_registry: Arc<SimpleFunctionRegistry>,
-}
-
-#[derive(Debug)]
-pub struct SimpleFunctionRegistry {
-    pub scalar_functions: HashMap<String, Arc<ScalarUDF>>,
-    pub aggregate_functions: HashMap<String, Arc<AggregateUDF>>,
-    pub window_functions: HashMap<String, Arc<WindowUDF>>,
-}
-
-impl FunctionRegistry for SimpleFunctionRegistry {
-    fn udfs(&self) -> HashSet<String> {
-        self.scalar_functions.keys().cloned().collect()
-    }
-
-    fn udf(&self, name: &str) -> datafusion::common::Result<Arc<ScalarUDF>> {
-        let result = self.scalar_functions.get(name);
-
-        result.cloned().ok_or_else(|| {
-            DataFusionError::Internal(format!(
-                "There is no UDF named \"{name}\" in the TaskContext"
-            ))
-        })
-    }
-
-    fn udaf(&self, name: &str) -> datafusion::common::Result<Arc<AggregateUDF>> {
-        let result = self.aggregate_functions.get(name);
-
-        result.cloned().ok_or_else(|| {
-            DataFusionError::Internal(format!(
-                "There is no UDAF named \"{name}\" in the TaskContext"
-            ))
-        })
-    }
-
-    fn udwf(&self, name: &str) -> datafusion::common::Result<Arc<WindowUDF>> {
-        let result = self.window_functions.get(name);
-
-        result.cloned().ok_or_else(|| {
-            DataFusionError::Internal(format!(
-                "There is no UDWF named \"{name}\" in the TaskContext"
-            ))
-        })
-    }
 }

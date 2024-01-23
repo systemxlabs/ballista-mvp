@@ -335,16 +335,15 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
             }
             let session_config = SessionConfig::from(config);
 
-            let function_registry = task.function_registry;
             let runtime = self.executor.get_runtime();
 
             Arc::new(TaskContext::new(
                 Some(task_identity.clone()),
                 task.session_id,
                 session_config,
-                function_registry.scalar_functions.clone(),
-                function_registry.aggregate_functions.clone(),
-                function_registry.window_functions.clone(),
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new(),
                 runtime,
             ))
         };
@@ -611,9 +610,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorGrpc
             let multi_task: Vec<TaskDefinition> = get_task_definition_vec(
                 multi_task,
                 self.executor.get_runtime(),
-                self.executor.scalar_functions.clone(),
-                self.executor.aggregate_functions.clone(),
-                self.executor.window_functions.clone(),
                 self.codec.clone(),
             )
             .map_err(|e| Status::invalid_argument(format!("{e}")))?;

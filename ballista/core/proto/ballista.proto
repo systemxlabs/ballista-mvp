@@ -185,17 +185,6 @@ message Action {
   repeated KeyValuePair settings = 100;
 }
 
-message ExecutePartition {
-  string job_id = 1;
-  uint32 stage_id = 2;
-  repeated uint32 partition_id = 3;
-  datafusion.PhysicalPlanNode plan = 4;
-  // The task could need to read partitions from other executors
-  repeated PartitionLocation partition_location = 5;
-  // Output partition for shuffle writer
-  datafusion.PhysicalHashRepartition output_partitioning = 6;
-}
-
 message FetchPartition {
   string job_id = 1;
   uint32 stage_id = 2;

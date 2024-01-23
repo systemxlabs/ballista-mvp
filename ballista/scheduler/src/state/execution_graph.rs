@@ -2762,11 +2762,6 @@ mod test {
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn test_shuffle_files_should_cleaned_after_fetch_failure() -> Result<()> {
-    //     todo!()
-    // }
-
     fn drain_tasks(graph: &mut ExecutionGraph) -> Result<()> {
         let executor = mock_executor("executor-id1".to_string());
         while let Some(task) = graph.pop_next_task(&executor.id)? {
