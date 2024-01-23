@@ -38,11 +38,8 @@ async fn main() -> Result<()> {
             .unwrap(),
         scheduler_host: "localhost".to_string(),
         scheduler_port: 50050,
-        scheduler_connect_timeout_seconds: 0, // fail
-        concurrent_tasks: 0,                  // defaults to all available cores
+        concurrent_tasks: 0, // defaults to all available cores
         work_dir: None,
-        job_data_ttl_seconds: 604800,
-        job_data_clean_up_interval_seconds: 0, // disable
         grpc_server_max_decoding_message_size: 16777216, // 16MB
         grpc_server_max_encoding_message_size: 16777216, // 16MB
         executor_heartbeat_interval_seconds: 60,
