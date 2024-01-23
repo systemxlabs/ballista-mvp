@@ -210,13 +210,6 @@ impl ExecutorManager {
         self.cluster_state.get_executor_metadata(executor_id).await
     }
 
-    /// It's only used for pull-based task scheduling.
-    ///
-    /// For push-based one, we should use [`register_executor`], instead.
-    pub async fn save_executor_metadata(&self, metadata: ExecutorMetadata) -> Result<()> {
-        self.cluster_state.save_executor_metadata(metadata).await
-    }
-
     /// Register the executor with the scheduler.
     ///
     /// This will save the executor metadata and the executor data to persistent state.
