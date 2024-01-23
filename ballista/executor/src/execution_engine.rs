@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use async_trait::async_trait;
 use ballista_core::execution_plans::ShuffleWriterExec;
 use ballista_core::serde::protobuf::ShuffleWritePartition;
 use ballista_core::utils;
@@ -26,21 +25,6 @@ use datafusion::physical_plan::ExecutionPlan;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-/// QueryStageExecutor executes a section of a query plan that has consistent partitioning and
-/// can be executed as one unit with each partition being executed in parallel. The output of each
-/// partition is re-partitioned and streamed to disk in Arrow IPC format. Future stages of the query
-/// will use the ShuffleReaderExec to read these results.
-#[async_trait]
-pub trait QueryStageExecutor: Sync + Send + Debug {
-    async fn execute_query_stage(
-        &self,
-        input_partition: usize,
-        context: Arc<TaskContext>,
-    ) -> Result<Vec<ShuffleWritePartition>>;
-
-    fn collect_plan_metrics(&self) -> Vec<MetricsSet>;
-}
-
 pub struct DatafusionExecutionEngine {}
 
 impl DatafusionExecutionEngine {
@@ -50,7 +34,7 @@ impl DatafusionExecutionEngine {
         stage_id: usize,
         plan: Arc<dyn ExecutionPlan>,
         work_dir: &str,
-    ) -> Result<Arc<dyn QueryStageExecutor>> {
+    ) -> Result<Arc<QueryStageExecutor>> {
         // the query plan created by the scheduler always starts with a ShuffleWriterExec
         let exec = if let Some(shuffle_writer) = plan.as_any().downcast_ref::<ShuffleWriterExec>() {
             // recreate the shuffle writer with the correct working directory
@@ -66,24 +50,25 @@ impl DatafusionExecutionEngine {
                 "Plan passed to new_query_stage_exec is not a ShuffleWriterExec".to_string(),
             ))
         }?;
-        Ok(Arc::new(DefaultQueryStageExec::new(exec)))
+        Ok(Arc::new(QueryStageExecutor::new(exec)))
     }
 }
 
+/// QueryStageExecutor executes a section of a query plan that has consistent partitioning and
+/// can be executed as one unit with each partition being executed in parallel. The output of each
+/// partition is re-partitioned and streamed to disk in Arrow IPC format. Future stages of the query
+/// will use the ShuffleReaderExec to read these results.
 #[derive(Debug)]
-pub struct DefaultQueryStageExec {
+pub struct QueryStageExecutor {
     shuffle_writer: ShuffleWriterExec,
 }
 
-impl DefaultQueryStageExec {
+impl QueryStageExecutor {
     pub fn new(shuffle_writer: ShuffleWriterExec) -> Self {
         Self { shuffle_writer }
     }
-}
 
-#[async_trait]
-impl QueryStageExecutor for DefaultQueryStageExec {
-    async fn execute_query_stage(
+    pub async fn execute_query_stage(
         &self,
         input_partition: usize,
         context: Arc<TaskContext>,
@@ -93,7 +78,7 @@ impl QueryStageExecutor for DefaultQueryStageExec {
             .await
     }
 
-    fn collect_plan_metrics(&self) -> Vec<MetricsSet> {
+    pub fn collect_plan_metrics(&self) -> Vec<MetricsSet> {
         utils::collect_plan_metrics(&self.shuffle_writer)
     }
 }
