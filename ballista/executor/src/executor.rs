@@ -19,7 +19,6 @@
 
 use crate::execution_engine::DatafusionExecutionEngine;
 use crate::execution_engine::QueryStageExecutor;
-use crate::metrics::ExecutorMetricsCollector;
 use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf;
 use ballista_core::serde::protobuf::ExecutorRegistration;
@@ -31,6 +30,7 @@ use datafusion::logical_expr::WindowUDF;
 use datafusion::physical_plan::udaf::AggregateUDF;
 use datafusion::physical_plan::udf::ScalarUDF;
 use futures::future::AbortHandle;
+use log::info;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
@@ -79,9 +79,6 @@ pub struct Executor {
     /// And others things are shared with [`runtime`].
     runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
 
-    /// Collector for runtime execution metrics
-    pub metrics_collector: Arc<dyn ExecutorMetricsCollector>,
-
     /// Concurrent tasks can run in executor
     pub concurrent_tasks: usize,
 
@@ -100,7 +97,6 @@ impl Executor {
         work_dir: &str,
         runtime: Arc<RuntimeEnv>,
         runtime_with_data_cache: Option<Arc<RuntimeEnv>>,
-        metrics_collector: Arc<dyn ExecutorMetricsCollector>,
         concurrent_tasks: usize,
     ) -> Self {
         Self {
@@ -112,7 +108,6 @@ impl Executor {
             window_functions: HashMap::new(),
             runtime,
             runtime_with_data_cache,
-            metrics_collector,
             concurrent_tasks,
             abort_handles: Default::default(),
             execution_engine: Arc::new(DatafusionExecutionEngine {}),
@@ -154,11 +149,12 @@ impl Executor {
 
         self.abort_handles.remove(&(task_id, partition.clone()));
 
-        self.metrics_collector.record_stage(
+        info!(
+            "=== [{}/{}/{}] Physical plan with metrics ===\n{:?}\n",
             &partition.job_id,
             partition.stage_id,
             partition.partition_id,
-            query_stage_exec,
+            query_stage_exec.collect_plan_metrics(),
         );
 
         Ok(partitions)
@@ -198,7 +194,6 @@ impl Executor {
 #[cfg(test)]
 mod test {
     use crate::executor::Executor;
-    use crate::metrics::LoggingMetricsCollector;
     use arrow::datatypes::{Schema, SchemaRef};
     use arrow::record_batch::RecordBatch;
     use ballista_core::execution_plans::ShuffleWriterExec;
@@ -324,14 +319,7 @@ mod test {
 
         let ctx = SessionContext::new();
 
-        let executor = Executor::new(
-            executor_registration,
-            &work_dir,
-            ctx.runtime_env(),
-            None,
-            Arc::new(LoggingMetricsCollector {}),
-            2,
-        );
+        let executor = Executor::new(executor_registration, &work_dir, ctx.runtime_env(), None, 2);
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
 

@@ -56,7 +56,6 @@ use crate::executor::{Executor, TasksDrainedFuture};
 use crate::executor_server;
 use crate::executor_server::TERMINATING;
 use crate::flight_service::BallistaFlightService;
-use crate::metrics::LoggingMetricsCollector;
 use crate::shutdown::Shutdown;
 use crate::shutdown::ShutdownNotifier;
 use crate::terminate;
@@ -145,14 +144,11 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         })?)
     };
 
-    let metrics_collector = Arc::new(LoggingMetricsCollector::default());
-
     let executor = Arc::new(Executor::new(
         executor_meta,
         &work_dir,
         runtime,
         None,
-        metrics_collector,
         concurrent_tasks,
     ));
 
