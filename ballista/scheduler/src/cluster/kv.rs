@@ -609,32 +609,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         Ok(session)
     }
 
-    async fn update_session(
-        &self,
-        session_id: &str,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>> {
-        let mut settings: Vec<KeyValuePair> = vec![];
-
-        for (key, value) in config.settings() {
-            settings.push(KeyValuePair {
-                key: key.clone(),
-                value: value.clone(),
-            })
-        }
-
-        let value = protobuf::SessionSettings { configs: settings };
-        self.store
-            .put(
-                Keyspace::Sessions,
-                session_id.to_owned(),
-                value.encode_to_vec(),
-            )
-            .await?;
-
-        Ok(create_datafusion_context(config, self.session_builder))
-    }
-
     async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
         let session_ctx = self.get_session(session_id).await.ok();
 

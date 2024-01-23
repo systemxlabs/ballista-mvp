@@ -35,12 +35,8 @@ pub const BALLISTA_REPARTITION_AGGREGATIONS: &str = "ballista.repartition.aggreg
 pub const BALLISTA_REPARTITION_WINDOWS: &str = "ballista.repartition.windows";
 pub const BALLISTA_PARQUET_PRUNING: &str = "ballista.parquet.pruning";
 pub const BALLISTA_COLLECT_STATISTICS: &str = "ballista.collect_statistics";
-/// Indicate whether to enable to data cache for a task
-pub const BALLISTA_DATA_CACHE_ENABLED: &str = "ballista.data_cache.enabled";
 
 pub const BALLISTA_WITH_INFORMATION_SCHEMA: &str = "ballista.with_information_schema";
-/// give a plugin files dir, and then the dynamic library files in this dir will be load when scheduler state init.
-pub const BALLISTA_PLUGIN_DIR: &str = "ballista.plugin_dir";
 
 pub type ParseResult<T> = result::Result<T, String>;
 
@@ -202,9 +198,6 @@ impl BallistaConfig {
                 "Configuration for collecting statistics during scan".to_string(),
                 DataType::Boolean, Some("false".to_string())
             ),
-            ConfigEntry::new(BALLISTA_PLUGIN_DIR.to_string(),
-                             "Sets the plugin dir".to_string(),
-                             DataType::Utf8, Some("".to_string())),
         ];
         entries
             .iter()
@@ -218,10 +211,6 @@ impl BallistaConfig {
 
     pub fn default_shuffle_partitions(&self) -> usize {
         self.get_usize_setting(BALLISTA_DEFAULT_SHUFFLE_PARTITIONS)
-    }
-
-    pub fn default_plugin_dir(&self) -> String {
-        self.get_string_setting(BALLISTA_PLUGIN_DIR)
     }
 
     pub fn default_batch_size(&self) -> usize {
@@ -279,17 +268,6 @@ impl BallistaConfig {
             v.parse::<bool>().unwrap()
         }
     }
-    fn get_string_setting(&self, key: &str) -> String {
-        if let Some(v) = self.settings.get(key) {
-            // infallible because we validate all configs in the constructor
-            v.to_string()
-        } else {
-            let entries = Self::valid_entries();
-            // infallible because we validate all configs in the constructor
-            let v = entries.get(key).unwrap().default_value.as_ref().unwrap();
-            v.to_string()
-        }
-    }
 }
 
 #[cfg(test)]
@@ -301,7 +279,6 @@ mod tests {
         let config = BallistaConfig::new()?;
         assert_eq!(16, config.default_shuffle_partitions());
         assert!(!config.default_with_information_schema());
-        assert_eq!("", config.default_plugin_dir().as_str());
         Ok(())
     }
 
@@ -320,7 +297,6 @@ mod tests {
     fn custom_config_invalid() -> Result<()> {
         let config = BallistaConfig::builder()
             .set(BALLISTA_DEFAULT_SHUFFLE_PARTITIONS, "true")
-            .set(BALLISTA_PLUGIN_DIR, "test_dir")
             .build();
         assert!(config.is_err());
         assert_eq!("General(\"Failed to parse user-supplied value 'ballista.shuffle.partitions' for configuration setting 'true': ParseIntError { kind: InvalidDigit }\")", format!("{:?}", config.unwrap_err()));

@@ -311,18 +311,6 @@ impl JobState for InMemoryJobState {
         Ok(session)
     }
 
-    async fn update_session(
-        &self,
-        session_id: &str,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>> {
-        let session = create_datafusion_context(config, self.session_builder);
-        self.sessions
-            .insert(session_id.to_string(), session.clone());
-
-        Ok(session)
-    }
-
     async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
         Ok(self.sessions.remove(session_id).map(|(_key, value)| value))
     }

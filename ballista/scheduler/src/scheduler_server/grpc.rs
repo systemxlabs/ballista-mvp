@@ -26,7 +26,7 @@ use ballista_core::serde::protobuf::{
     ExecuteQueryFailureResult, ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult,
     ExecutorHeartbeat, GetJobStatusParams, GetJobStatusResult, HeartBeatParams, HeartBeatResult,
     RegisterExecutorParams, RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult,
-    UpdateSessionParams, UpdateSessionResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
+    UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
@@ -195,31 +195,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
         Ok(Response::new(CreateSessionResult {
             session_id: ctx.session_id(),
         }))
-    }
-
-    async fn update_session(
-        &self,
-        request: Request<UpdateSessionParams>,
-    ) -> Result<Response<UpdateSessionResult>, Status> {
-        let session_params = request.into_inner();
-        // parse config
-        let mut config_builder = BallistaConfig::builder();
-        for kv_pair in &session_params.settings {
-            config_builder = config_builder.set(&kv_pair.key, &kv_pair.value);
-        }
-        let config = config_builder.build().map_err(|e| {
-            let msg = format!("Could not parse configs: {e}");
-            error!("{}", msg);
-            Status::internal(msg)
-        })?;
-
-        self.state
-            .session_manager
-            .update_session(&session_params.session_id, &config)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to create SessionContext: {e:?}")))?;
-
-        Ok(Response::new(UpdateSessionResult { success: true }))
     }
 
     async fn remove_session(

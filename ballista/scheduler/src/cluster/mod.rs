@@ -301,13 +301,6 @@ pub trait JobState: Send + Sync {
     /// Create a new saved session
     async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>>;
 
-    // Update a new saved session. If the session does not exist, a new one will be created
-    async fn update_session(
-        &self,
-        session_id: &str,
-        config: &BallistaConfig,
-    ) -> Result<Arc<SessionContext>>;
-
     async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>>;
 }
 

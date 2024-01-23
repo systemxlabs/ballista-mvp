@@ -493,15 +493,6 @@ message CreateSessionResult {
   string session_id = 1;
 }
 
-message UpdateSessionParams {
-  string session_id = 1;
-  repeated KeyValuePair settings = 2;
-}
-
-message UpdateSessionResult {
-  bool success = 1;
-}
-
 message RemoveSessionParams {
   string session_id = 1;
 }
@@ -641,8 +632,6 @@ service SchedulerGrpc {
   rpc UpdateTaskStatus (UpdateTaskStatusParams) returns (UpdateTaskStatusResult) {}
 
   rpc CreateSession (CreateSessionParams) returns (CreateSessionResult) {}
-
-  rpc UpdateSession (UpdateSessionParams) returns (UpdateSessionResult) {}
 
   rpc RemoveSession (RemoveSessionParams) returns (RemoveSessionResult) {}
 

@@ -27,7 +27,7 @@ use ballista_core::error::Result;
 
 use crate::cluster::JobState;
 use ballista_core::serde::protobuf::{
-    job_status, JobStatus, KeyValuePair, MultiTaskDefinition, TaskId, TaskStatus,
+    job_status, JobStatus, MultiTaskDefinition, TaskId, TaskStatus,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 use ballista_core::serde::BallistaCodec;
@@ -46,7 +46,6 @@ use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 
-use ballista_core::config::BALLISTA_DATA_CACHE_ENABLED;
 use tracing::trace;
 
 type ActiveJobCache = Arc<DashMap<String, JobInfoCache>>;
@@ -551,10 +550,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                         plan: plan.clone(),
                         session_id: session_id.clone(),
                         launch_time,
-                        props: vec![KeyValuePair {
-                            key: BALLISTA_DATA_CACHE_ENABLED.to_string(),
-                            value: "true".to_string(),
-                        }],
+                        props: vec![],
                     });
                 }
                 if !tasks_without_data_cache.is_empty() {
