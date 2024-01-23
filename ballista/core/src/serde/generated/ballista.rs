@@ -829,18 +829,6 @@ pub struct CreateSessionResult {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RemoveSessionParams {
-    #[prost(string, tag = "1")]
-    pub session_id: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RemoveSessionResult {
-    #[prost(bool, tag = "1")]
-    pub success: bool,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExecuteSqlParams {
     #[prost(string, tag = "1")]
     pub sql: ::prost::alloc::string::String,
@@ -1247,33 +1235,6 @@ pub mod scheduler_grpc_client {
                 );
             self.inner.unary(req, path, codec).await
         }
-        pub async fn remove_session(
-            &mut self,
-            request: impl tonic::IntoRequest<super::RemoveSessionParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::RemoveSessionResult>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ballista.protobuf.SchedulerGrpc/RemoveSession",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("ballista.protobuf.SchedulerGrpc", "RemoveSession"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
         pub async fn execute_query(
             &mut self,
             request: impl tonic::IntoRequest<super::ExecuteQueryParams>,
@@ -1611,13 +1572,6 @@ pub mod scheduler_grpc_server {
             tonic::Response<super::CreateSessionResult>,
             tonic::Status,
         >;
-        async fn remove_session(
-            &self,
-            request: tonic::Request<super::RemoveSessionParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::RemoveSessionResult>,
-            tonic::Status,
-        >;
         async fn execute_query(
             &self,
             request: tonic::Request<super::ExecuteQueryParams>,
@@ -1898,52 +1852,6 @@ pub mod scheduler_grpc_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = CreateSessionSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/ballista.protobuf.SchedulerGrpc/RemoveSession" => {
-                    #[allow(non_camel_case_types)]
-                    struct RemoveSessionSvc<T: SchedulerGrpc>(pub Arc<T>);
-                    impl<
-                        T: SchedulerGrpc,
-                    > tonic::server::UnaryService<super::RemoveSessionParams>
-                    for RemoveSessionSvc<T> {
-                        type Response = super::RemoveSessionResult;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::RemoveSessionParams>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as SchedulerGrpc>::remove_session(&inner, request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = RemoveSessionSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

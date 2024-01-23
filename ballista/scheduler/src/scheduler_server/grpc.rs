@@ -25,8 +25,7 @@ use ballista_core::serde::protobuf::{
     CleanJobDataParams, CleanJobDataResult, CreateSessionParams, CreateSessionResult,
     ExecuteQueryFailureResult, ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult,
     ExecutorHeartbeat, GetJobStatusParams, GetJobStatusResult, HeartBeatParams, HeartBeatResult,
-    RegisterExecutorParams, RegisterExecutorResult, RemoveSessionParams, RemoveSessionResult,
-    UpdateTaskStatusParams, UpdateTaskStatusResult,
+    RegisterExecutorParams, RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
@@ -195,25 +194,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
         Ok(Response::new(CreateSessionResult {
             session_id: ctx.session_id(),
         }))
-    }
-
-    async fn remove_session(
-        &self,
-        request: Request<RemoveSessionParams>,
-    ) -> Result<Response<RemoveSessionResult>, Status> {
-        let session_params = request.into_inner();
-        self.state
-            .session_manager
-            .remove_session(&session_params.session_id)
-            .await
-            .map_err(|e| {
-                Status::internal(format!(
-                    "Failed to remove SessionContext: {e:?} for session {}",
-                    session_params.session_id
-                ))
-            })?;
-
-        Ok(Response::new(RemoveSessionResult { success: true }))
     }
 
     async fn execute_query(

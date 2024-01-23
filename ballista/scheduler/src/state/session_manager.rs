@@ -33,10 +33,6 @@ impl SessionManager {
         Self { state }
     }
 
-    pub async fn remove_session(&self, session_id: &str) -> Result<Option<Arc<SessionContext>>> {
-        self.state.remove_session(session_id).await
-    }
-
     pub async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
         self.state.create_session(config).await
     }
