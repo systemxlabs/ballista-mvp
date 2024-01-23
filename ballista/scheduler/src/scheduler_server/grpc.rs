@@ -19,7 +19,6 @@ use ballista_core::config::{BallistaConfig, BALLISTA_JOB_NAME};
 use ballista_core::serde::protobuf::execute_query_params::{OptionalSessionId, Query};
 use std::collections::HashMap;
 
-use ballista_core::serde::protobuf::executor_registration::OptionalHost;
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
     execute_query_failure_result, execute_query_result, CancelJobParams, CancelJobResult,
@@ -60,12 +59,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
             info!("Received register executor request for {:?}", metadata);
             let metadata = ExecutorMetadata {
                 id: metadata.id,
-                host: metadata
-                    .optional_host
-                    .map(|h| match h {
-                        OptionalHost::Host(host) => host,
-                    })
-                    .unwrap_or_else(|| remote_addr.unwrap().ip().to_string()),
+                host: remote_addr.map_or("localhost".to_string(), |addr| addr.ip().to_string()),
                 port: metadata.port as u16,
                 grpc_port: metadata.grpc_port as u16,
                 specification: metadata.specification.unwrap().into(),
@@ -108,12 +102,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
             if let Some(metadata) = metadata {
                 let metadata = ExecutorMetadata {
                     id: metadata.id,
-                    host: metadata
-                        .optional_host
-                        .map(|h| match h {
-                            OptionalHost::Host(host) => host,
-                        })
-                        .unwrap_or_else(|| remote_addr.unwrap().ip().to_string()),
+                    host: remote_addr.map_or("localhost".to_string(), |addr| addr.ip().to_string()),
                     port: metadata.port as u16,
                     grpc_port: metadata.grpc_port as u16,
                     specification: metadata.specification.unwrap().into(),
@@ -491,8 +480,8 @@ mod test {
     use crate::config::SchedulerConfig;
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
-        executor_registration::OptionalHost, executor_status, ExecutorRegistration, ExecutorStatus,
-        ExecutorStoppedParams, HeartBeatParams, RegisterExecutorParams,
+        executor_status, ExecutorRegistration, ExecutorStatus, ExecutorStoppedParams,
+        HeartBeatParams, RegisterExecutorParams,
     };
     use ballista_core::serde::scheduler::ExecutorSpecification;
     use ballista_core::serde::BallistaCodec;
@@ -518,7 +507,6 @@ mod test {
 
         let exec_meta = ExecutorRegistration {
             id: "abc".to_owned(),
-            optional_host: Some(OptionalHost::Host("http://localhost:8080".to_owned())),
             port: 0,
             grpc_port: 0,
             specification: Some(ExecutorSpecification { task_slots: 2 }.into()),
@@ -547,7 +535,7 @@ mod test {
         assert_eq!(stored_executor.grpc_port, 0);
         assert_eq!(stored_executor.port, 0);
         assert_eq!(stored_executor.specification.task_slots, 2);
-        assert_eq!(stored_executor.host, "http://localhost:8080".to_owned());
+        assert_eq!(stored_executor.host, "localhost".to_owned());
 
         let request: Request<ExecutorStoppedParams> = Request::new(ExecutorStoppedParams {
             executor_id: "abc".to_owned(),
@@ -600,7 +588,6 @@ mod test {
 
         let exec_meta = ExecutorRegistration {
             id: "abc".to_owned(),
-            optional_host: Some(OptionalHost::Host("http://localhost:8080".to_owned())),
             port: 0,
             grpc_port: 0,
             specification: Some(ExecutorSpecification { task_slots: 2 }.into()),
@@ -630,7 +617,7 @@ mod test {
         assert_eq!(stored_executor.grpc_port, 0);
         assert_eq!(stored_executor.port, 0);
         assert_eq!(stored_executor.specification.task_slots, 2);
-        assert_eq!(stored_executor.host, "http://localhost:8080".to_owned());
+        assert_eq!(stored_executor.host, "localhost".to_owned());
 
         Ok(())
     }
@@ -652,7 +639,6 @@ mod test {
 
         let exec_meta = ExecutorRegistration {
             id: "abc".to_owned(),
-            optional_host: Some(OptionalHost::Host("http://localhost:8080".to_owned())),
             port: 0,
             grpc_port: 0,
             specification: Some(ExecutorSpecification { task_slots: 2 }.into()),

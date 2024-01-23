@@ -41,9 +41,8 @@ use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf::executor_resource::Resource;
 use ballista_core::serde::protobuf::executor_status::Status;
 use ballista_core::serde::protobuf::{
-    executor_registration, scheduler_grpc_client::SchedulerGrpcClient, ExecutorRegistration,
-    ExecutorResource, ExecutorSpecification, ExecutorStatus, ExecutorStoppedParams,
-    HeartBeatParams,
+    scheduler_grpc_client::SchedulerGrpcClient, ExecutorRegistration, ExecutorResource,
+    ExecutorSpecification, ExecutorStatus, ExecutorStoppedParams, HeartBeatParams,
 };
 use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::{create_grpc_client_connection, create_grpc_server};
@@ -59,7 +58,6 @@ use crate::terminate;
 
 pub struct ExecutorProcessConfig {
     pub bind_host: String,
-    pub external_host: Option<String>,
     pub port: u16,
     pub grpc_port: u16,
     pub scheduler_host: String,
@@ -118,10 +116,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     let executor_id = Uuid::new_v4().to_string();
     let executor_meta = ExecutorRegistration {
         id: executor_id.clone(),
-        optional_host: opt
-            .external_host
-            .clone()
-            .map(executor_registration::OptionalHost::Host),
         port: opt.port as u32,
         grpc_port: opt.grpc_port as u32,
         specification: Some(ExecutorSpecification {
@@ -223,10 +217,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
                 }),
                 metadata: Some(ExecutorRegistration {
                     id: executor_id.clone(),
-                    optional_host: opt
-                        .external_host
-                        .clone()
-                        .map(executor_registration::OptionalHost::Host),
                     port: opt.port as u32,
                     grpc_port: opt.grpc_port as u32,
                     specification: Some(ExecutorSpecification {

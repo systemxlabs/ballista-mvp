@@ -26,7 +26,6 @@ use ballista_executor::executor_process::{start_executor_process, ExecutorProces
 async fn main() -> Result<()> {
     let config = ExecutorProcessConfig {
         special_mod_log_level: "INFO,datafusion=INFO".to_string(),
-        external_host: None,
         bind_host: "0.0.0.0".to_string(),
         port: std::env::var("BIND_PORT")
             .unwrap_or("50051".to_string())

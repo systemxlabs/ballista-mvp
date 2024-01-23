@@ -290,7 +290,6 @@ mod test {
             port: 0,
             grpc_port: 0,
             specification: None,
-            optional_host: None,
         };
 
         let ctx = SessionContext::new();
