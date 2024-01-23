@@ -25,7 +25,6 @@ use ballista_core::error::{BallistaError, Result};
 use ballista_core::event_loop::{EventAction, EventSender};
 
 use crate::config::SchedulerConfig;
-use crate::metrics::SchedulerMetricsCollector;
 use crate::scheduler_server::timestamp_millis;
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
@@ -38,25 +37,12 @@ use crate::state::SchedulerState;
 
 pub(crate) struct QueryStageScheduler<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
     state: Arc<SchedulerState<T, U>>,
-    metrics_collector: Arc<dyn SchedulerMetricsCollector>,
     config: Arc<SchedulerConfig>,
 }
 
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> QueryStageScheduler<T, U> {
-    pub(crate) fn new(
-        state: Arc<SchedulerState<T, U>>,
-        metrics_collector: Arc<dyn SchedulerMetricsCollector>,
-        config: Arc<SchedulerConfig>,
-    ) -> Self {
-        Self {
-            state,
-            metrics_collector,
-            config,
-        }
-    }
-
-    pub(crate) fn metrics_collector(&self) -> &dyn SchedulerMetricsCollector {
-        self.metrics_collector.as_ref()
+    pub(crate) fn new(state: Arc<SchedulerState<T, U>>, config: Arc<SchedulerConfig>) -> Self {
+        Self { state, config }
     }
 }
 
@@ -128,14 +114,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
                     }
                 });
             }
-            QueryStageSchedulerEvent::JobSubmitted {
-                job_id,
-                queued_at,
-                submitted_at,
-            } => {
-                self.metrics_collector
-                    .record_submitted(&job_id, queued_at, submitted_at);
-
+            QueryStageSchedulerEvent::JobSubmitted { job_id, .. } => {
                 info!("Job {} submitted", job_id);
 
                 event_sender
@@ -145,12 +124,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
             QueryStageSchedulerEvent::JobPlanningFailed {
                 job_id,
                 fail_message,
-                queued_at,
-                failed_at,
+                ..
             } => {
-                self.metrics_collector
-                    .record_failed(&job_id, queued_at, failed_at);
-
                 error!("Job {} failed: {}", job_id, fail_message);
                 if let Err(e) = self
                     .state
@@ -164,14 +139,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
                     );
                 }
             }
-            QueryStageSchedulerEvent::JobFinished {
-                job_id,
-                queued_at,
-                completed_at,
-            } => {
-                self.metrics_collector
-                    .record_completed(&job_id, queued_at, completed_at);
-
+            QueryStageSchedulerEvent::JobFinished { job_id, .. } => {
                 info!("Job {} success", job_id);
                 if let Err(e) = self.state.task_manager.succeed_job(&job_id).await {
                     error!(
@@ -184,12 +152,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
             QueryStageSchedulerEvent::JobRunningFailed {
                 job_id,
                 fail_message,
-                queued_at,
-                failed_at,
+                ..
             } => {
-                self.metrics_collector
-                    .record_failed(&job_id, queued_at, failed_at);
-
                 error!("Job {} running failed", job_id);
                 match self
                     .state
@@ -220,8 +184,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
                 }
             }
             QueryStageSchedulerEvent::JobCancel(job_id) => {
-                self.metrics_collector.record_cancelled(&job_id);
-
                 info!("Job {} Cancelled", job_id);
                 match self.state.task_manager.cancel_job(&job_id).await {
                     Ok((running_tasks, _pending_tasks)) => {
@@ -333,12 +295,11 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
 #[cfg(test)]
 mod tests {
     use crate::config::SchedulerConfig;
-    use crate::test_utils::{await_condition, SchedulerTest, TestMetricsCollector};
+    use crate::test_utils::{await_condition, SchedulerTest};
     use ballista_core::error::Result;
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use datafusion::logical_expr::{col, sum, LogicalPlan};
     use datafusion::test_util::scan_empty_with_partitions;
-    use std::sync::Arc;
     use std::time::Duration;
     use tracing_subscriber::EnvFilter;
 
@@ -350,16 +311,7 @@ mod tests {
 
         let plan = test_plan(10);
 
-        let metrics_collector = Arc::new(TestMetricsCollector::default());
-
-        let mut test = SchedulerTest::new(
-            SchedulerConfig::default(),
-            metrics_collector.clone(),
-            1,
-            1,
-            None,
-        )
-        .await?;
+        let mut test = SchedulerTest::new(SchedulerConfig::default(), 1, 1, None).await?;
 
         let job_id = "job-1";
 

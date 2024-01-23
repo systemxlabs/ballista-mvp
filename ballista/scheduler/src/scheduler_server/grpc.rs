@@ -489,7 +489,6 @@ mod test {
     use tonic::Request;
 
     use crate::config::SchedulerConfig;
-    use crate::metrics::default_metrics_collector;
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
         executor_registration::OptionalHost, executor_status, ExecutorRegistration, ExecutorStatus,
@@ -514,7 +513,6 @@ mod test {
                 cluster.clone(),
                 BallistaCodec::default(),
                 Arc::new(config),
-                default_metrics_collector().unwrap(),
             );
         scheduler.init().await?;
 
@@ -597,7 +595,6 @@ mod test {
                 cluster,
                 BallistaCodec::default(),
                 Arc::new(config),
-                default_metrics_collector().unwrap(),
             );
         scheduler.init().await?;
 
@@ -650,7 +647,6 @@ mod test {
                 cluster.clone(),
                 BallistaCodec::default(),
                 Arc::new(config),
-                default_metrics_collector().unwrap(),
             );
         scheduler.init().await?;
 

@@ -117,10 +117,6 @@ pub fn get_routes<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
         .and(with_data_server(scheduler_server.clone()))
         .and_then(|job_id, data_server| handlers::get_job_svg_graph(data_server, job_id));
 
-    let route_scheduler_metrics = warp::path!("api" / "metrics")
-        .and(with_data_server(scheduler_server))
-        .and_then(|data_server| handlers::get_scheduler_metrics(data_server));
-
     let routes = route_scheduler_state
         .or(route_executors)
         .or(route_jobs)
@@ -128,7 +124,6 @@ pub fn get_routes<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
         .or(route_query_stages)
         .or(route_job_dot)
         .or(route_query_stage_dot)
-        .or(route_job_dot_svg)
-        .or(route_scheduler_metrics);
+        .or(route_job_dot_svg);
     routes.boxed()
 }

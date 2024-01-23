@@ -25,7 +25,6 @@ use std::time::Duration;
 use async_trait::async_trait;
 
 use crate::config::SchedulerConfig;
-use crate::metrics::SchedulerMetricsCollector;
 use crate::scheduler_server::{timestamp_millis, SchedulerServer};
 
 use crate::state::executor_manager::ExecutorManager;
@@ -373,7 +372,6 @@ pub struct SchedulerTest {
 impl SchedulerTest {
     pub async fn new(
         config: SchedulerConfig,
-        metrics_collector: Arc<dyn SchedulerMetricsCollector>,
         num_executors: usize,
         task_slots_per_executor: usize,
         runner: Option<Arc<dyn TaskRunner>>,
@@ -418,7 +416,6 @@ impl SchedulerTest {
                 cluster,
                 BallistaCodec::default(),
                 Arc::new(config),
-                metrics_collector,
                 Arc::new(launcher),
             );
         scheduler.init().await?;
@@ -656,109 +653,6 @@ impl MetricEvent {
             MetricEvent::Failed(job, _, _) => job.as_str(),
         }
     }
-}
-
-#[derive(Default, Clone)]
-pub struct TestMetricsCollector {
-    pub events: Arc<Mutex<Vec<MetricEvent>>>,
-}
-
-impl TestMetricsCollector {
-    pub fn job_events(&self, job_id: &str) -> Vec<MetricEvent> {
-        let guard = self.events.lock();
-
-        guard
-            .iter()
-            .filter_map(|event| {
-                if event.job_id() == job_id {
-                    Some(event.clone())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-}
-
-impl SchedulerMetricsCollector for TestMetricsCollector {
-    fn record_submitted(&self, job_id: &str, queued_at: u64, submitted_at: u64) {
-        let mut guard = self.events.lock();
-        guard.push(MetricEvent::Submitted(
-            job_id.to_owned(),
-            queued_at,
-            submitted_at,
-        ));
-    }
-
-    fn record_completed(&self, job_id: &str, queued_at: u64, completed_at: u64) {
-        let mut guard = self.events.lock();
-        guard.push(MetricEvent::Completed(
-            job_id.to_owned(),
-            queued_at,
-            completed_at,
-        ));
-    }
-
-    fn record_failed(&self, job_id: &str, queued_at: u64, failed_at: u64) {
-        let mut guard = self.events.lock();
-        guard.push(MetricEvent::Failed(job_id.to_owned(), queued_at, failed_at));
-    }
-
-    fn record_cancelled(&self, job_id: &str) {
-        let mut guard = self.events.lock();
-        guard.push(MetricEvent::Cancelled(job_id.to_owned()));
-    }
-
-    fn set_pending_tasks_queue_size(&self, _value: u64) {}
-
-    fn gather_metrics(&self) -> Result<Option<(Vec<u8>, String)>> {
-        Ok(None)
-    }
-}
-
-pub fn assert_submitted_event(job_id: &str, collector: &TestMetricsCollector) {
-    let found = collector
-        .job_events(job_id)
-        .iter()
-        .any(|ev| matches!(ev, MetricEvent::Submitted(_, _, _)));
-
-    assert!(found, "{}", "Expected submitted event for job {job_id}");
-}
-
-pub fn assert_no_submitted_event(job_id: &str, collector: &TestMetricsCollector) {
-    let found = collector
-        .job_events(job_id)
-        .iter()
-        .any(|ev| matches!(ev, MetricEvent::Submitted(_, _, _)));
-
-    assert!(!found, "{}", "Expected no submitted event for job {job_id}");
-}
-
-pub fn assert_completed_event(job_id: &str, collector: &TestMetricsCollector) {
-    let found = collector
-        .job_events(job_id)
-        .iter()
-        .any(|ev| matches!(ev, MetricEvent::Completed(_, _, _)));
-
-    assert!(found, "{}", "Expected completed event for job {job_id}");
-}
-
-pub fn assert_cancelled_event(job_id: &str, collector: &TestMetricsCollector) {
-    let found = collector
-        .job_events(job_id)
-        .iter()
-        .any(|ev| matches!(ev, MetricEvent::Cancelled(_)));
-
-    assert!(found, "{}", "Expected cancelled event for job {job_id}");
-}
-
-pub fn assert_failed_event(job_id: &str, collector: &TestMetricsCollector) {
-    let found = collector
-        .job_events(job_id)
-        .iter()
-        .any(|ev| matches!(ev, MetricEvent::Failed(_, _, _)));
-
-    assert!(found, "{}", "Expected failed event for job {job_id}");
 }
 
 pub async fn test_aggregation_plan(partition: usize) -> ExecutionGraph {

@@ -21,7 +21,6 @@ use datafusion_proto::physical_plan::AsExecutionPlan;
 use graphviz_rust::cmd::{CommandArg, Format};
 use graphviz_rust::exec;
 use graphviz_rust::printer::PrinterContext;
-use http::header::CONTENT_TYPE;
 
 use std::time::Duration;
 use warp::Rejection;
@@ -327,15 +326,4 @@ pub(crate) async fn get_job_svg_graph<T: AsLogicalPlan, U: AsExecutionPlan>(
         }
         _ => Ok("Not Found".to_string()),
     }
-}
-
-pub(crate) async fn get_scheduler_metrics<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
-) -> Result<impl warp::Reply, Rejection> {
-    Ok(data_server
-        .metrics_collector()
-        .gather_metrics()
-        .map_err(|_| warp::reject())?
-        .map(|(data, content_type)| warp::reply::with_header(data, CONTENT_TYPE, content_type))
-        .unwrap_or_else(|| warp::reply::with_header(vec![], CONTENT_TYPE, "text/html")))
 }

@@ -31,7 +31,6 @@ use datafusion_proto::physical_plan::AsExecutionPlan;
 
 use crate::cluster::BallistaCluster;
 use crate::config::SchedulerConfig;
-use crate::metrics::SchedulerMetricsCollector;
 use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use log::{error, warn};
 
@@ -55,7 +54,6 @@ pub struct SchedulerServer<T: 'static + AsLogicalPlan, U: 'static + AsExecutionP
     pub start_time: u128,
     pub state: Arc<SchedulerState<T, U>>,
     pub(crate) query_stage_event_loop: EventLoop<QueryStageSchedulerEvent>,
-    query_stage_scheduler: Arc<QueryStageScheduler<T, U>>,
     config: Arc<SchedulerConfig>,
 }
 
@@ -65,7 +63,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
         cluster: BallistaCluster,
         codec: BallistaCodec<T, U>,
         config: Arc<SchedulerConfig>,
-        metrics_collector: Arc<dyn SchedulerMetricsCollector>,
     ) -> Self {
         let state = Arc::new(SchedulerState::new(
             cluster,
@@ -73,11 +70,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
             scheduler_name.clone(),
             config.clone(),
         ));
-        let query_stage_scheduler = Arc::new(QueryStageScheduler::new(
-            state.clone(),
-            metrics_collector,
-            config.clone(),
-        ));
+        let query_stage_scheduler =
+            Arc::new(QueryStageScheduler::new(state.clone(), config.clone()));
         let query_stage_event_loop = EventLoop::new(
             "query_stage".to_owned(),
             config.event_loop_buffer_size as usize,
@@ -89,7 +83,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
             start_time: timestamp_millis() as u128,
             state,
             query_stage_event_loop,
-            query_stage_scheduler,
             config,
         }
     }
@@ -100,7 +93,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
         cluster: BallistaCluster,
         codec: BallistaCodec<T, U>,
         config: Arc<SchedulerConfig>,
-        metrics_collector: Arc<dyn SchedulerMetricsCollector>,
         task_launcher: Arc<dyn TaskLauncher>,
     ) -> Self {
         let state = Arc::new(SchedulerState::new_with_task_launcher(
@@ -110,11 +102,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
             config.clone(),
             task_launcher,
         ));
-        let query_stage_scheduler = Arc::new(QueryStageScheduler::new(
-            state.clone(),
-            metrics_collector,
-            config.clone(),
-        ));
+        let query_stage_scheduler =
+            Arc::new(QueryStageScheduler::new(state.clone(), config.clone()));
         let query_stage_event_loop = EventLoop::new(
             "query_stage".to_owned(),
             config.event_loop_buffer_size as usize,
@@ -126,7 +115,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
             start_time: timestamp_millis() as u128,
             state,
             query_stage_event_loop,
-            query_stage_scheduler,
             config,
         }
     }
@@ -145,10 +133,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
 
     pub fn running_job_number(&self) -> usize {
         self.state.task_manager.running_job_number()
-    }
-
-    pub(crate) fn metrics_collector(&self) -> &dyn SchedulerMetricsCollector {
-        self.query_stage_scheduler.metrics_collector()
     }
 
     pub(crate) async fn submit_job(
@@ -347,26 +331,13 @@ mod test {
 
     use crate::scheduler_server::timestamp_millis;
 
-    use crate::test_utils::{
-        assert_completed_event, assert_failed_event, assert_no_submitted_event,
-        assert_submitted_event, ExplodingTableProvider, SchedulerTest, TaskRunnerFn,
-        TestMetricsCollector,
-    };
+    use crate::test_utils::{ExplodingTableProvider, SchedulerTest, TaskRunnerFn};
 
     #[tokio::test]
     async fn test_push_scheduling() -> Result<()> {
         let plan = test_plan();
 
-        let metrics_collector = Arc::new(TestMetricsCollector::default());
-
-        let mut test = SchedulerTest::new(
-            SchedulerConfig::default(),
-            metrics_collector.clone(),
-            4,
-            1,
-            None,
-        )
-        .await?;
+        let mut test = SchedulerTest::new(SchedulerConfig::default(), 4, 1, None).await?;
 
         let status = test.run("job", "", &plan).await.expect("running plan");
 
@@ -380,9 +351,6 @@ mod test {
                 panic!("Expected success status but found {:?}", other);
             }
         }
-
-        assert_submitted_event("job", &metrics_collector);
-        assert_completed_event("job", &metrics_collector);
 
         Ok(())
     }
@@ -428,16 +396,7 @@ mod test {
             },
         ));
 
-        let metrics_collector = Arc::new(TestMetricsCollector::default());
-
-        let mut test = SchedulerTest::new(
-            SchedulerConfig::default(),
-            metrics_collector.clone(),
-            4,
-            1,
-            Some(runner),
-        )
-        .await?;
+        let mut test = SchedulerTest::new(SchedulerConfig::default(), 4, 1, Some(runner)).await?;
 
         let status = test.run("job", "", &plan).await.expect("running plan");
 
@@ -453,9 +412,6 @@ mod test {
             "Expected job status to be failed but it was {status:?}"
         );
 
-        assert_submitted_event("job", &metrics_collector);
-        assert_failed_event("job", &metrics_collector);
-
         Ok(())
     }
 
@@ -463,15 +419,7 @@ mod test {
     // Here we simulate a planning failure using ExplodingTableProvider to test this.
     #[tokio::test]
     async fn test_planning_failure() -> Result<()> {
-        let metrics_collector = Arc::new(TestMetricsCollector::default());
-        let mut test = SchedulerTest::new(
-            SchedulerConfig::default(),
-            metrics_collector.clone(),
-            4,
-            1,
-            None,
-        )
-        .await?;
+        let mut test = SchedulerTest::new(SchedulerConfig::default(), 4, 1, None).await?;
 
         let ctx = test.ctx().await?;
 
@@ -496,9 +444,6 @@ mod test {
             "{}",
             "Expected job status to be failed but it was {status:?}"
         );
-
-        assert_no_submitted_event("job", &metrics_collector);
-        assert_failed_event("job", &metrics_collector);
 
         Ok(())
     }

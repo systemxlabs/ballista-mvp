@@ -21,7 +21,6 @@ pub mod api;
 pub mod cluster;
 pub mod config;
 pub mod display;
-pub mod metrics;
 pub mod planner;
 pub mod scheduler_process;
 pub mod scheduler_server;

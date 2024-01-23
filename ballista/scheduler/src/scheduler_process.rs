@@ -37,7 +37,6 @@ use crate::api::{get_routes, EitherBody, Error};
 use crate::cluster::BallistaCluster;
 use crate::config::SchedulerConfig;
 use crate::flight_sql::FlightSqlServiceImpl;
-use crate::metrics::default_metrics_collector;
 use crate::scheduler_server::SchedulerServer;
 
 pub async fn start_server(
@@ -52,15 +51,12 @@ pub async fn start_server(
     // Should only call SchedulerServer::new() once in the process
     info!("Starting Scheduler grpc server with push task scheduling policy",);
 
-    let metrics_collector = default_metrics_collector()?;
-
     let mut scheduler_server: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
         SchedulerServer::new(
             config.scheduler_name(),
             cluster,
             BallistaCodec::default(),
             config,
-            metrics_collector,
         );
 
     scheduler_server.init().await?;
