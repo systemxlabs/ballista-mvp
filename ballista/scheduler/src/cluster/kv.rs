@@ -399,10 +399,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         Ok(())
     }
 
-    fn pending_job_number(&self) -> usize {
-        self.queued_jobs.len()
-    }
-
     async fn submit_job(&self, job_id: String, graph: &ExecutionGraph) -> Result<()> {
         if self.queued_jobs.get(&job_id).is_some() {
             let status = graph.status();
@@ -529,12 +525,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         } else {
             Ok(())
         }
-    }
-
-    async fn try_acquire_job(&self, _job_id: &str) -> Result<Option<ExecutionGraph>> {
-        Err(BallistaError::NotImplemented(
-            "Work stealing is not currently implemented".to_string(),
-        ))
     }
 
     async fn job_state_events(&self) -> Result<JobStateEventStream> {

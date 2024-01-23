@@ -319,14 +319,6 @@ mod tests {
 
         test.tick().await?;
 
-        let pending_jobs = test.pending_job_number();
-        let expected = 0usize;
-        assert_eq!(
-            expected, pending_jobs,
-            "Expected {} pending jobs but found {}",
-            expected, pending_jobs
-        );
-
         let running_jobs = test.running_job_number();
         let expected = 1usize;
         assert_eq!(

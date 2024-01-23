@@ -253,10 +253,6 @@ pub trait JobState: Send + Sync {
     /// in global state
     fn accept_job(&self, job_id: &str, job_name: &str, queued_at: u64) -> Result<()>;
 
-    /// Get the number of queued jobs. If it's big, then it means the scheduler is too busy.
-    /// In normal case, it's better to be 0.
-    fn pending_job_number(&self) -> usize;
-
     /// Submit a new job to the `JobState`. It is assumed that the submitter owns the job.
     /// In local state the job should be save as `JobStatus::Active` and in shared state
     /// it should be saved as `JobStatus::Running` with `scheduler` set to the current scheduler
@@ -284,11 +280,6 @@ pub trait JobState: Send + Sync {
 
     /// Delete a job from the global state
     async fn remove_job(&self, job_id: &str) -> Result<()>;
-
-    /// Attempt to acquire ownership of the given job. If the job is still in a running state
-    /// and is successfully acquired by the caller, return the current `ExecutionGraph`,
-    /// otherwise return `None`
-    async fn try_acquire_job(&self, job_id: &str) -> Result<Option<ExecutionGraph>>;
 
     /// Get a stream of all `JobState` events. An event should be published any time that status
     /// of a job changes in state

@@ -180,12 +180,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
         self.state.accept_job(job_id, job_name, queued_at)
     }
 
-    /// Get the number of queued jobs. If it's big, then it means the scheduler is too busy.
-    /// In normal case, it's better to be 0.
-    pub fn pending_job_number(&self) -> usize {
-        self.state.pending_job_number()
-    }
-
     /// Get the number of running jobs.
     pub fn running_job_number(&self) -> usize {
         self.active_job_cache.len()

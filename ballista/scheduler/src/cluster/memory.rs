@@ -268,12 +268,6 @@ impl JobState for InMemoryJobState {
             .and_then(|(_, graph)| graph.clone()))
     }
 
-    async fn try_acquire_job(&self, _job_id: &str) -> Result<Option<ExecutionGraph>> {
-        // Always return None. The only state stored here are for completed jobs
-        // which cannot be acquired
-        Ok(None)
-    }
-
     async fn save_job(&self, job_id: &str, graph: &ExecutionGraph) -> Result<()> {
         let status = graph.status().clone();
 
@@ -339,10 +333,6 @@ impl JobState for InMemoryJobState {
             .insert(job_id.to_string(), (job_name.to_string(), queued_at));
 
         Ok(())
-    }
-
-    fn pending_job_number(&self) -> usize {
-        self.queued_jobs.len()
     }
 
     async fn fail_unscheduled_job(&self, job_id: &str, reason: String) -> Result<()> {

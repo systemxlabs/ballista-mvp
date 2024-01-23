@@ -450,10 +450,6 @@ impl SchedulerTest {
         })
     }
 
-    pub fn pending_job_number(&self) -> usize {
-        self.scheduler.pending_job_number()
-    }
-
     pub fn running_job_number(&self) -> usize {
         self.scheduler.running_job_number()
     }
