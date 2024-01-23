@@ -25,8 +25,7 @@ use crate::serde::protobuf;
 use datafusion_proto::protobuf as datafusion_protobuf;
 
 use crate::serde::scheduler::{
-    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation,
-    PartitionStats,
+    Action, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation, PartitionStats,
 };
 use datafusion::physical_plan::Partitioning;
 use protobuf::{action::ActionType, operator_metric, NamedCount, NamedGauge, NamedTime};
@@ -210,36 +209,6 @@ impl Into<protobuf::ExecutorSpecification> for ExecutorSpecification {
             )]
             .into_iter()
             .map(|r| protobuf::ExecutorResource { resource: Some(r) })
-            .collect(),
-        }
-    }
-}
-
-struct ExecutorResourcePair {
-    total: protobuf::executor_resource::Resource,
-    available: protobuf::executor_resource::Resource,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<protobuf::ExecutorData> for ExecutorData {
-    fn into(self) -> protobuf::ExecutorData {
-        protobuf::ExecutorData {
-            executor_id: self.executor_id,
-            resources: vec![ExecutorResourcePair {
-                total: protobuf::executor_resource::Resource::TaskSlots(self.total_task_slots),
-                available: protobuf::executor_resource::Resource::TaskSlots(
-                    self.available_task_slots,
-                ),
-            }]
-            .into_iter()
-            .map(|r| protobuf::ExecutorResourcePair {
-                total: Some(protobuf::ExecutorResource {
-                    resource: Some(r.total),
-                }),
-                available: Some(protobuf::ExecutorResource {
-                    resource: Some(r.available),
-                }),
-            })
             .collect(),
         }
     }

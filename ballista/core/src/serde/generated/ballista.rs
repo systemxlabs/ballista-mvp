@@ -567,22 +567,6 @@ pub struct ExecutorTaskSlots {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutorData {
-    #[prost(string, tag = "1")]
-    pub executor_id: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag = "2")]
-    pub resources: ::prost::alloc::vec::Vec<ExecutorResourcePair>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutorResourcePair {
-    #[prost(message, optional, tag = "1")]
-    pub total: ::core::option::Option<ExecutorResource>,
-    #[prost(message, optional, tag = "2")]
-    pub available: ::core::option::Option<ExecutorResource>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RunningTask {
     #[prost(string, tag = "1")]
     pub executor_id: ::prost::alloc::string::String,

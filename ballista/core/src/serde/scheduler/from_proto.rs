@@ -30,7 +30,7 @@ use std::time::Duration;
 
 use crate::error::BallistaError;
 use crate::serde::scheduler::{
-    Action, ExecutorData, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation,
+    Action, ExecutorMetadata, ExecutorSpecification, PartitionId, PartitionLocation,
     PartitionStats, SimpleFunctionRegistry, TaskDefinition,
 };
 
@@ -237,34 +237,6 @@ impl Into<ExecutorSpecification> for protobuf::ExecutorSpecification {
             {
                 ret.task_slots = task_slots
             }
-        }
-        ret
-    }
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<ExecutorData> for protobuf::ExecutorData {
-    fn into(self) -> ExecutorData {
-        let mut ret = ExecutorData {
-            executor_id: self.executor_id,
-            total_task_slots: 0,
-            available_task_slots: 0,
-        };
-        for resource in self.resources {
-            if let Some(task_slots) = resource.total {
-                if let Some(protobuf::executor_resource::Resource::TaskSlots(task_slots)) =
-                    task_slots.resource
-                {
-                    ret.total_task_slots = task_slots
-                }
-            };
-            if let Some(task_slots) = resource.available {
-                if let Some(protobuf::executor_resource::Resource::TaskSlots(task_slots)) =
-                    task_slots.resource
-                {
-                    ret.available_task_slots = task_slots
-                }
-            };
         }
         ret
     }
