@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use async_trait::async_trait;
 use datafusion::arrow::ipc::reader::StreamReader;
 use datafusion::common::stats::Precision;
 use std::any::Any;
@@ -287,7 +286,7 @@ fn send_fetch_partitions(
     let response_sender_c = response_sender.clone();
     let join_handle = tokio::spawn(async move {
         for p in local_locations {
-            let r = PartitionReaderEnum::Local.fetch_partition(&p).await;
+            let r = fetch_partition_local(&p).await;
             if let Err(e) = response_sender_c.send(r).await {
                 error!("Fail to send response event to the channel due to {}", e);
             }
@@ -301,7 +300,7 @@ fn send_fetch_partitions(
         let join_handle = tokio::spawn(async move {
             // Block if exceeds max request number
             let permit = semaphore.acquire_owned().await.unwrap();
-            let r = PartitionReaderEnum::FlightRemote.fetch_partition(&p).await;
+            let r = fetch_partition_remote(&p).await;
             // Block if the channel buffer is ful
             if let Err(e) = response_sender.send(r).await {
                 error!("Fail to send response event to the channel due to {}", e);
@@ -317,36 +316,6 @@ fn send_fetch_partitions(
 
 fn check_is_local_location(location: &PartitionLocation) -> bool {
     std::path::Path::new(location.path.as_str()).exists()
-}
-
-/// Partition reader Trait, different partition reader can have
-#[async_trait]
-trait PartitionReader: Send + Sync + Clone {
-    // Read partition data from PartitionLocation
-    async fn fetch_partition(
-        &self,
-        location: &PartitionLocation,
-    ) -> result::Result<SendableRecordBatchStream, BallistaError>;
-}
-
-#[derive(Clone)]
-enum PartitionReaderEnum {
-    Local,
-    FlightRemote,
-}
-
-#[async_trait]
-impl PartitionReader for PartitionReaderEnum {
-    // Notice return `BallistaError::FetchFailed` will let scheduler re-schedule the task.
-    async fn fetch_partition(
-        &self,
-        location: &PartitionLocation,
-    ) -> result::Result<SendableRecordBatchStream, BallistaError> {
-        match self {
-            PartitionReaderEnum::FlightRemote => fetch_partition_remote(location).await,
-            PartitionReaderEnum::Local => fetch_partition_local(location).await,
-        }
-    }
 }
 
 async fn fetch_partition_remote(
