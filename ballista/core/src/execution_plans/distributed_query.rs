@@ -84,23 +84,6 @@ impl<T: 'static + AsLogicalPlan> DistributedQueryExec<T> {
         }
     }
 
-    pub fn with_extension(
-        scheduler_url: String,
-        config: BallistaConfig,
-        plan: LogicalPlan,
-        extension_codec: Arc<dyn LogicalExtensionCodec>,
-        session_id: String,
-    ) -> Self {
-        Self {
-            scheduler_url,
-            config,
-            plan,
-            extension_codec,
-            plan_repr: PhantomData,
-            session_id,
-        }
-    }
-
     pub fn with_repr(
         scheduler_url: String,
         config: BallistaConfig,

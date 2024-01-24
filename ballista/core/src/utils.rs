@@ -263,33 +263,6 @@ impl<T: 'static + AsLogicalPlan> BallistaQueryPlanner<T> {
             plan_repr: PhantomData,
         }
     }
-
-    pub fn with_extension(
-        scheduler_url: String,
-        config: BallistaConfig,
-        extension_codec: Arc<dyn LogicalExtensionCodec>,
-    ) -> Self {
-        Self {
-            scheduler_url,
-            config,
-            extension_codec,
-            plan_repr: PhantomData,
-        }
-    }
-
-    pub fn with_repr(
-        scheduler_url: String,
-        config: BallistaConfig,
-        extension_codec: Arc<dyn LogicalExtensionCodec>,
-        plan_repr: PhantomData<T>,
-    ) -> Self {
-        Self {
-            scheduler_url,
-            config,
-            extension_codec,
-            plan_repr,
-        }
-    }
 }
 
 #[async_trait]
