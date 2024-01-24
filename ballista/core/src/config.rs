@@ -25,7 +25,6 @@ use crate::error::{BallistaError, Result};
 
 use datafusion::arrow::datatypes::DataType;
 
-pub const BALLISTA_JOB_NAME: &str = "ballista.job.name";
 pub const BALLISTA_DEFAULT_SHUFFLE_PARTITIONS: &str = "ballista.shuffle.partitions";
 pub const BALLISTA_HASH_JOIN_SINGLE_PARTITION_THRESHOLD: &str =
     "ballista.optimizer.hash_join_single_partition_threshold";
@@ -167,9 +166,6 @@ impl BallistaConfig {
     /// All available configuration options
     pub fn valid_entries() -> HashMap<String, ConfigEntry> {
         let entries = vec![
-            ConfigEntry::new(BALLISTA_JOB_NAME.to_string(),
-                             "Sets the job name that will appear in the web user interface for any submitted jobs".to_string(),
-                             DataType::Utf8, None),
             ConfigEntry::new(BALLISTA_DEFAULT_SHUFFLE_PARTITIONS.to_string(),
                              "Sets the default number of partitions to create when repartitioning query stages".to_string(),
                              DataType::UInt16, Some("16".to_string())),

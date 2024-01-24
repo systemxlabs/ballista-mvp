@@ -462,7 +462,7 @@ impl SchedulerTest {
             .await
     }
 
-    pub async fn submit(&mut self, job_id: &str, job_name: &str, plan: &LogicalPlan) -> Result<()> {
+    pub async fn submit(&mut self, job_id: &str, plan: &LogicalPlan) -> Result<()> {
         println!("{:?}", self.ballista_config);
         let ctx = self
             .scheduler
@@ -471,9 +471,7 @@ impl SchedulerTest {
             .create_session(&self.ballista_config)
             .await?;
 
-        self.scheduler
-            .submit_job(job_id, job_name, ctx, plan)
-            .await?;
+        self.scheduler.submit_job(job_id, ctx, plan).await?;
 
         Ok(())
     }
@@ -576,12 +574,7 @@ impl SchedulerTest {
         final_status
     }
 
-    pub async fn run(
-        &mut self,
-        job_id: &str,
-        job_name: &str,
-        plan: &LogicalPlan,
-    ) -> Result<JobStatus> {
+    pub async fn run(&mut self, job_id: &str, plan: &LogicalPlan) -> Result<JobStatus> {
         let ctx = self
             .scheduler
             .state
@@ -589,9 +582,7 @@ impl SchedulerTest {
             .create_session(&self.ballista_config)
             .await?;
 
-        self.scheduler
-            .submit_job(job_id, job_name, ctx, plan)
-            .await?;
+        self.scheduler.submit_job(job_id, ctx, plan).await?;
 
         let mut receiver = self.status_receiver.take().unwrap();
 
@@ -664,7 +655,7 @@ pub async fn test_aggregation_plan_with_job_id(partition: usize, job_id: &str) -
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    ExecutionGraph::new("localhost:50050", job_id, "", "session", plan, 0).unwrap()
+    ExecutionGraph::new("localhost:50050", job_id, "session", plan, 0).unwrap()
 }
 
 pub async fn test_two_aggregations_plan(partition: usize) -> ExecutionGraph {
@@ -699,7 +690,7 @@ pub async fn test_two_aggregations_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap()
+    ExecutionGraph::new("localhost:50050", "job", "session", plan, 0).unwrap()
 }
 
 pub async fn test_coalesce_plan(partition: usize) -> ExecutionGraph {
@@ -726,7 +717,7 @@ pub async fn test_coalesce_plan(partition: usize) -> ExecutionGraph {
         .await
         .unwrap();
 
-    ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap()
+    ExecutionGraph::new("localhost:50050", "job", "session", plan, 0).unwrap()
 }
 
 pub async fn test_join_plan(partition: usize) -> ExecutionGraph {
@@ -774,7 +765,7 @@ pub async fn test_join_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 
@@ -805,7 +796,7 @@ pub async fn test_union_all_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 
@@ -836,7 +827,7 @@ pub async fn test_union_plan(partition: usize) -> ExecutionGraph {
         DisplayableExecutionPlan::new(plan.as_ref()).indent(false)
     );
 
-    let graph = ExecutionGraph::new("localhost:50050", "job", "", "session", plan, 0).unwrap();
+    let graph = ExecutionGraph::new("localhost:50050", "job", "session", plan, 0).unwrap();
 
     println!("{graph:?}");
 

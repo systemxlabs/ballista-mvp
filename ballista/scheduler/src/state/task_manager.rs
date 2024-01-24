@@ -163,8 +163,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
     }
 
     /// Enqueue a job for scheduling
-    pub fn queue_job(&self, job_id: &str, job_name: &str, queued_at: u64) -> Result<()> {
-        self.state.accept_job(job_id, job_name, queued_at)
+    pub fn queue_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
+        self.state.accept_job(job_id, queued_at)
     }
 
     /// Get the number of running jobs.
@@ -178,19 +178,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
     pub async fn submit_job(
         &self,
         job_id: &str,
-        job_name: &str,
         session_id: &str,
         plan: Arc<dyn ExecutionPlan>,
         queued_at: u64,
     ) -> Result<()> {
-        let mut graph = ExecutionGraph::new(
-            &self.scheduler_id,
-            job_id,
-            job_name,
-            session_id,
-            plan,
-            queued_at,
-        )?;
+        let mut graph =
+            ExecutionGraph::new(&self.scheduler_id, job_id, session_id, plan, queued_at)?;
         info!("Submitting execution graph: {:?}", graph);
 
         self.state.submit_job(job_id.to_string(), &graph).await?;
@@ -619,7 +612,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
 
 pub struct JobOverview {
     pub job_id: String,
-    pub job_name: String,
     pub status: JobStatus,
     pub start_time: u64,
     pub end_time: u64,
@@ -638,7 +630,6 @@ impl From<&ExecutionGraph> for JobOverview {
 
         Self {
             job_id: value.job_id().to_string(),
-            job_name: value.job_name().to_string(),
             status: value.status().clone(),
             start_time: value.start_time(),
             end_time: value.end_time(),

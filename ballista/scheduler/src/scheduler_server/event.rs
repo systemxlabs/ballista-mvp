@@ -28,7 +28,6 @@ use std::sync::Arc;
 pub enum QueryStageSchedulerEvent {
     JobQueued {
         job_id: String,
-        job_name: String,
         session_ctx: Arc<SessionContext>,
         plan: Box<LogicalPlan>,
         queued_at: u64,
@@ -69,10 +68,8 @@ pub enum QueryStageSchedulerEvent {
 impl Debug for QueryStageSchedulerEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            QueryStageSchedulerEvent::JobQueued {
-                job_id, job_name, ..
-            } => {
-                write!(f, "JobQueued : job_id={job_id}, job_name={job_name}.")
+            QueryStageSchedulerEvent::JobQueued { job_id, .. } => {
+                write!(f, "JobQueued : job_id={job_id}.")
             }
             QueryStageSchedulerEvent::JobSubmitted { job_id, .. } => {
                 write!(f, "JobSubmitted : job_id={job_id}.")

@@ -105,7 +105,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
     pub(crate) async fn submit_job(
         &self,
         job_id: &str,
-        job_name: &str,
         ctx: Arc<SessionContext>,
         plan: &LogicalPlan,
     ) -> Result<()> {
@@ -113,7 +112,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
             .get_sender()?
             .post_event(QueryStageSchedulerEvent::JobQueued {
                 job_id: job_id.to_owned(),
-                job_name: job_name.to_owned(),
                 session_ctx: ctx,
                 plan: Box::new(plan.clone()),
                 queued_at: timestamp_millis(),
@@ -306,7 +304,7 @@ mod test {
 
         let mut test = SchedulerTest::new(SchedulerConfig::default(), 4, 1, None).await?;
 
-        let status = test.run("job", "", &plan).await.expect("running plan");
+        let status = test.run("job", &plan).await.expect("running plan");
 
         match status.status {
             Some(job_status::Status::Successful(SuccessfulJob {
@@ -365,7 +363,7 @@ mod test {
 
         let mut test = SchedulerTest::new(SchedulerConfig::default(), 4, 1, Some(runner)).await?;
 
-        let status = test.run("job", "", &plan).await.expect("running plan");
+        let status = test.run("job", &plan).await.expect("running plan");
 
         assert!(
             matches!(
@@ -398,7 +396,7 @@ mod test {
             .into_optimized_plan()?;
 
         // This should fail when we try and create the physical plan
-        let status = test.run("job", "", &plan).await?;
+        let status = test.run("job", &plan).await?;
 
         assert!(
             matches!(

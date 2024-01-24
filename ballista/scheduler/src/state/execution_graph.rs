@@ -106,8 +106,6 @@ pub struct ExecutionGraph {
     scheduler_id: Option<String>,
     /// ID for this job
     job_id: String,
-    /// Job name, can be empty string
-    job_name: String,
     /// Session ID for this job
     session_id: String,
     /// Status of this job
@@ -144,7 +142,6 @@ impl ExecutionGraph {
     pub fn new(
         scheduler_id: &str,
         job_id: &str,
-        job_name: &str,
         session_id: &str,
         plan: Arc<dyn ExecutionPlan>,
         queued_at: u64,
@@ -163,11 +160,9 @@ impl ExecutionGraph {
         Ok(Self {
             scheduler_id: Some(scheduler_id.to_string()),
             job_id: job_id.to_string(),
-            job_name: job_name.to_string(),
             session_id: session_id.to_string(),
             status: JobStatus {
                 job_id: job_id.to_string(),
-                job_name: job_name.to_string(),
                 status: Some(Status::Running(RunningJob {
                     queued_at,
                     started_at,
@@ -187,10 +182,6 @@ impl ExecutionGraph {
 
     pub fn job_id(&self) -> &str {
         self.job_id.as_str()
-    }
-
-    pub fn job_name(&self) -> &str {
-        self.job_name.as_str()
     }
 
     pub fn session_id(&self) -> &str {
@@ -1228,7 +1219,6 @@ impl ExecutionGraph {
     pub fn fail_job(&mut self, error: String) {
         self.status = JobStatus {
             job_id: self.job_id.clone(),
-            job_name: self.job_name.clone(),
             status: Some(Status::Failed(FailedJob {
                 error,
                 queued_at: self.queued_at,
@@ -1255,7 +1245,6 @@ impl ExecutionGraph {
 
         self.status = JobStatus {
             job_id: self.job_id.clone(),
-            job_name: self.job_name.clone(),
             status: Some(job_status::Status::Successful(SuccessfulJob {
                 partition_location,
 
@@ -1338,7 +1327,6 @@ impl ExecutionGraph {
         Ok(ExecutionGraph {
             scheduler_id: (!proto.scheduler_id.is_empty()).then_some(proto.scheduler_id),
             job_id: proto.job_id,
-            job_name: proto.job_name,
             session_id: proto.session_id,
             status: proto.status.ok_or_else(|| {
                 BallistaError::Internal("Invalid Execution Graph: missing job status".to_owned())
@@ -1415,7 +1403,6 @@ impl ExecutionGraph {
 
         Ok(protobuf::ExecutionGraph {
             job_id: graph.job_id,
-            job_name: graph.job_name,
             session_id: graph.session_id,
             status: Some(graph.status),
             queued_at: graph.queued_at,

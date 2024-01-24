@@ -77,7 +77,6 @@ message ExecutionGraph {
   string scheduler_id = 7;
   uint32 task_id_gen = 8;
   repeated StageAttempts failed_attempts = 9;
-  string job_name = 10;
   uint64 start_time = 11;
   uint64 end_time = 12;
   uint64 queued_at = 13;
@@ -548,7 +547,6 @@ message FailedJob {
 
 message JobStatus {
   string job_id = 5;
-  string job_name = 6;
 
   oneof status {
     QueuedJob queued = 1;

@@ -90,8 +90,6 @@ pub struct ExecutionGraph {
     pub task_id_gen: u32,
     #[prost(message, repeated, tag = "9")]
     pub failed_attempts: ::prost::alloc::vec::Vec<StageAttempts>,
-    #[prost(string, tag = "10")]
-    pub job_name: ::prost::alloc::string::String,
     #[prost(uint64, tag = "11")]
     pub start_time: u64,
     #[prost(uint64, tag = "12")]
@@ -929,8 +927,6 @@ pub struct FailedJob {
 pub struct JobStatus {
     #[prost(string, tag = "5")]
     pub job_id: ::prost::alloc::string::String,
-    #[prost(string, tag = "6")]
-    pub job_name: ::prost::alloc::string::String,
     #[prost(oneof = "job_status::Status", tags = "1, 2, 3, 4")]
     pub status: ::core::option::Option<job_status::Status>,
 }

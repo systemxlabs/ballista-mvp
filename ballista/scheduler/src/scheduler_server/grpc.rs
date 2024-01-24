@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use ballista_core::config::{BallistaConfig, BALLISTA_JOB_NAME};
+use ballista_core::config::BallistaConfig;
 use ballista_core::serde::protobuf::execute_query_params::{OptionalSessionId, Query};
 use std::collections::HashMap;
 
@@ -302,12 +302,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
             debug!("Received plan for execution: {:?}", plan);
 
             let job_id = self.state.task_manager.generate_job_id();
-            let job_name = query_settings
-                .get(BALLISTA_JOB_NAME)
-                .cloned()
-                .unwrap_or_else(|| "None".to_string());
 
-            self.submit_job(&job_id, &job_name, session_ctx, &plan)
+            self.submit_job(&job_id, session_ctx, &plan)
                 .await
                 .map_err(|e| {
                     let msg = format!("Failed to send JobQueued event for {job_id}: {e:?}");

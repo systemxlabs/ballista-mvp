@@ -371,9 +371,8 @@ impl FlightSqlServiceImpl {
         plan: &LogicalPlan,
     ) -> Result<String, Status> {
         let job_id = self.server.state.task_manager.generate_job_id();
-        let job_name = format!("Flight SQL job {job_id}");
         self.server
-            .submit_job(&job_id, &job_name, ctx, plan)
+            .submit_job(&job_id, ctx, plan)
             .await
             .map_err(|e| {
                 let msg = format!("Failed to send JobQueued event for {job_id}: {e:?}");

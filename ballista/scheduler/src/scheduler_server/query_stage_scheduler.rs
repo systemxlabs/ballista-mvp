@@ -72,18 +72,13 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
         match event {
             QueryStageSchedulerEvent::JobQueued {
                 job_id,
-                job_name,
                 session_ctx,
                 plan,
                 queued_at,
             } => {
-                info!("Job {} queued with name {:?}", job_id, job_name);
+                info!("Job {} queued", job_id);
 
-                if let Err(e) = self
-                    .state
-                    .task_manager
-                    .queue_job(&job_id, &job_name, queued_at)
-                {
+                if let Err(e) = self.state.task_manager.queue_job(&job_id, queued_at) {
                     error!("Fail to queue job {} due to {:?}", job_id, e);
                     return Ok(());
                 }
@@ -91,7 +86,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
                 let state = self.state.clone();
                 tokio::spawn(async move {
                     let event = if let Err(e) = state
-                        .submit_job(&job_id, &job_name, session_ctx, &plan, queued_at)
+                        .submit_job(&job_id, session_ctx, &plan, queued_at)
                         .await
                     {
                         let fail_message = format!("Error planning job {job_id}: {e:?}");
@@ -315,7 +310,7 @@ mod tests {
 
         let job_id = "job-1";
 
-        test.submit(job_id, "", &plan).await?;
+        test.submit(job_id, &plan).await?;
 
         test.tick().await?;
 

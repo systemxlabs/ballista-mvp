@@ -191,8 +191,8 @@ pub struct InMemoryJobState {
     scheduler: String,
     /// Jobs which have either completed successfully or failed
     completed_jobs: DashMap<String, (JobStatus, Option<ExecutionGraph>)>,
-    /// In-memory store of queued jobs. Map from Job ID -> (Job Name, queued_at timestamp)
-    queued_jobs: DashMap<String, (String, u64)>,
+    /// In-memory store of queued jobs. Map from Job ID -> queued_at timestamp
+    queued_jobs: DashMap<String, u64>,
     /// In-memory store of running job statuses. Map from Job ID -> JobStatus
     running_jobs: DashMap<String, JobStatus>,
     /// Active ballista sessions
@@ -239,10 +239,9 @@ impl JobState for InMemoryJobState {
     }
 
     async fn get_job_status(&self, job_id: &str) -> Result<Option<JobStatus>> {
-        if let Some((job_name, queued_at)) = self.queued_jobs.get(job_id).as_deref() {
+        if let Some(queued_at) = self.queued_jobs.get(job_id).as_deref() {
             return Ok(Some(JobStatus {
                 job_id: job_id.to_string(),
-                job_name: job_name.clone(),
                 status: Some(Status::Queued(QueuedJob {
                     queued_at: *queued_at,
                 })),
@@ -324,21 +323,19 @@ impl JobState for InMemoryJobState {
             .collect())
     }
 
-    fn accept_job(&self, job_id: &str, job_name: &str, queued_at: u64) -> Result<()> {
-        self.queued_jobs
-            .insert(job_id.to_string(), (job_name.to_string(), queued_at));
+    fn accept_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
+        self.queued_jobs.insert(job_id.to_string(), queued_at);
 
         Ok(())
     }
 
     async fn fail_unscheduled_job(&self, job_id: &str, reason: String) -> Result<()> {
-        if let Some((job_id, (job_name, queued_at))) = self.queued_jobs.remove(job_id) {
+        if let Some((job_id, queued_at)) = self.queued_jobs.remove(job_id) {
             self.completed_jobs.insert(
                 job_id.clone(),
                 (
                     JobStatus {
                         job_id,
-                        job_name,
                         status: Some(Status::Failed(FailedJob {
                             error: reason,
                             queued_at,

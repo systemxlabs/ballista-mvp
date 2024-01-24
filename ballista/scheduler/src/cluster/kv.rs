@@ -65,8 +65,8 @@ pub struct KeyValueState<
     /// Name of current scheduler. Should be `{host}:{port}`
     #[allow(dead_code)]
     scheduler: String,
-    /// In-memory store of queued jobs. Map from Job ID -> (Job Name, queued_at timestamp)
-    queued_jobs: DashMap<String, (String, u64)>,
+    /// In-memory store of queued jobs. Map from Job ID -> queued_at timestamp
+    queued_jobs: DashMap<String, u64>,
     //// `SessionBuilder` for constructing `SessionContext` from stored `BallistaConfig`
     session_builder: SessionBuilder,
 }
@@ -392,9 +392,8 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> JobState
     for KeyValueState<S, T, U>
 {
-    fn accept_job(&self, job_id: &str, job_name: &str, queued_at: u64) -> Result<()> {
-        self.queued_jobs
-            .insert(job_id.to_string(), (job_name.to_string(), queued_at));
+    fn accept_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
+        self.queued_jobs.insert(job_id.to_string(), queued_at);
 
         Ok(())
     }
@@ -434,10 +433,9 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
     }
 
     async fn get_job_status(&self, job_id: &str) -> Result<Option<JobStatus>> {
-        if let Some((job_name, queued_at)) = self.queued_jobs.get(job_id).as_deref() {
+        if let Some(queued_at) = self.queued_jobs.get(job_id).as_deref() {
             Ok(Some(JobStatus {
                 job_id: job_id.to_string(),
-                job_name: job_name.clone(),
                 status: Some(Status::Queued(QueuedJob {
                     queued_at: *queued_at,
                 })),
@@ -488,10 +486,9 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
     }
 
     async fn fail_unscheduled_job(&self, job_id: &str, reason: String) -> Result<()> {
-        if let Some((job_id, (job_name, queued_at))) = self.queued_jobs.remove(job_id) {
+        if let Some((job_id, queued_at)) = self.queued_jobs.remove(job_id) {
             let status = JobStatus {
                 job_id: job_id.clone(),
-                job_name,
                 status: Some(Status::Failed(FailedJob {
                     error: reason,
                     queued_at,

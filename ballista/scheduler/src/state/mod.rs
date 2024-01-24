@@ -290,7 +290,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerState<T,
     pub(crate) async fn submit_job(
         &self,
         job_id: &str,
-        job_name: &str,
         session_ctx: Arc<SessionContext>,
         plan: &LogicalPlan,
         queued_at: u64,
@@ -348,7 +347,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerState<T,
         );
 
         self.task_manager
-            .submit_job(job_id, job_name, &session_ctx.session_id(), plan, queued_at)
+            .submit_job(job_id, &session_ctx.session_id(), plan, queued_at)
             .await?;
 
         let elapsed = start.elapsed();

@@ -53,7 +53,7 @@ impl<S: JobState> JobStateTest<S> {
     }
 
     pub fn queue_job(self, job_id: &str) -> Result<Self> {
-        self.state.accept_job(job_id, "", timestamp_millis())?;
+        self.state.accept_job(job_id, timestamp_millis())?;
         Ok(self)
     }
 
