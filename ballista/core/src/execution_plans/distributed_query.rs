@@ -36,9 +36,7 @@ use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, SendableRecordBatchStream,
     Statistics,
 };
-use datafusion_proto::logical_plan::{
-    AsLogicalPlan, DefaultLogicalExtensionCodec, LogicalExtensionCodec,
-};
+use datafusion_proto::logical_plan::{AsLogicalPlan, LogicalExtensionCodec};
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
 use log::{error, info};
 use std::any::Any;
