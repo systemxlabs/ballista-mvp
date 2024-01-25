@@ -277,7 +277,7 @@ impl<T: 'static + AsLogicalPlan> QueryPlanner for BallistaQueryPlanner<T> {
                 // table state is managed locally in the BallistaContext, not in the scheduler
                 Ok(Arc::new(EmptyExec::new(Arc::new(Schema::empty()))))
             }
-            _ => Ok(Arc::new(DistributedQueryExec::with_repr(
+            _ => Ok(Arc::new(DistributedQueryExec::new(
                 self.scheduler_url.clone(),
                 self.config.clone(),
                 logical_plan.clone(),
