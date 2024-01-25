@@ -668,30 +668,6 @@ pub mod task_status {
         Successful(super::SuccessfulTask),
     }
 }
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TaskDefinition {
-    #[prost(uint32, tag = "1")]
-    pub task_id: u32,
-    #[prost(uint32, tag = "2")]
-    pub task_attempt_num: u32,
-    #[prost(string, tag = "3")]
-    pub job_id: ::prost::alloc::string::String,
-    #[prost(uint32, tag = "4")]
-    pub stage_id: u32,
-    #[prost(uint32, tag = "5")]
-    pub stage_attempt_num: u32,
-    #[prost(uint32, tag = "6")]
-    pub partition_id: u32,
-    #[prost(bytes = "vec", tag = "7")]
-    pub plan: ::prost::alloc::vec::Vec<u8>,
-    #[prost(string, tag = "9")]
-    pub session_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag = "10")]
-    pub launch_time: u64,
-    #[prost(message, repeated, tag = "11")]
-    pub props: ::prost::alloc::vec::Vec<KeyValuePair>,
-}
 /// A set of tasks in the same stage
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -717,14 +693,6 @@ pub struct MultiTaskDefinition {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionSettings {
     #[prost(message, repeated, tag = "1")]
-    pub configs: ::prost::alloc::vec::Vec<KeyValuePair>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct JobSessionConfig {
-    #[prost(string, tag = "1")]
-    pub session_id: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag = "2")]
     pub configs: ::prost::alloc::vec::Vec<KeyValuePair>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -824,12 +792,6 @@ pub struct CreateSessionParams {
 pub struct CreateSessionResult {
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecuteSqlParams {
-    #[prost(string, tag = "1")]
-    pub sql: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -950,12 +912,6 @@ pub mod job_status {
 pub struct GetJobStatusResult {
     #[prost(message, optional, tag = "1")]
     pub status: ::core::option::Option<JobStatus>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FilePartitionMetadata {
-    #[prost(string, repeated, tag = "1")]
-    pub filename: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
