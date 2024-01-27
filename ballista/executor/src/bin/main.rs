@@ -36,7 +36,10 @@ async fn main() -> Result<()> {
             .parse::<u16>()
             .unwrap(),
         scheduler_host: "localhost".to_string(),
-        scheduler_port: 50050,
+        scheduler_port: std::env::var("SCHEDULER_PORT")
+            .unwrap_or("50050".to_string())
+            .parse::<u16>()
+            .unwrap(),
         concurrent_tasks: 0, // defaults to all available cores
         work_dir: None,
         grpc_server_max_decoding_message_size: 16777216, // 16MB
