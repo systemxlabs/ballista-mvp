@@ -17,7 +17,6 @@
 
 #![doc = include_str!("../README.md")]
 
-pub mod execution_engine;
 pub mod executor;
 pub mod executor_process;
 pub mod executor_server;

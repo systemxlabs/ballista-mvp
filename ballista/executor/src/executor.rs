@@ -17,11 +17,12 @@
 
 //! Ballista executor logic
 
-use crate::execution_engine::{DatafusionExecutionEngine, QueryStageExecutor};
 use ballista_core::error::BallistaError;
+use ballista_core::execution_plans::ShuffleWriterExec;
 use ballista_core::serde::protobuf;
 use ballista_core::serde::protobuf::ExecutorRegistration;
 use ballista_core::serde::scheduler::PartitionId;
+use ballista_core::utils;
 use dashmap::DashMap;
 use datafusion::execution::context::TaskContext;
 use datafusion::execution::runtime_env::RuntimeEnv;
@@ -65,10 +66,6 @@ pub struct Executor {
 
     /// Handles to abort executing tasks
     abort_handles: AbortHandles,
-
-    /// Execution engine that the executor will delegate to
-    /// for executing query stages
-    pub(crate) execution_engine: Arc<DatafusionExecutionEngine>,
 }
 
 impl Executor {
@@ -85,7 +82,6 @@ impl Executor {
             runtime,
             concurrent_tasks,
             abort_handles: Default::default(),
-            execution_engine: Arc::new(DatafusionExecutionEngine {}),
         }
     }
 }
@@ -102,11 +98,11 @@ impl Executor {
         &self,
         task_id: usize,
         partition: PartitionId,
-        query_stage_exec: Arc<QueryStageExecutor>,
+        shuffle_writer: Arc<ShuffleWriterExec>,
         task_ctx: Arc<TaskContext>,
     ) -> Result<Vec<protobuf::ShuffleWritePartition>, BallistaError> {
         let (task, abort_handle) = futures::future::abortable(
-            query_stage_exec.execute_query_stage(partition.partition_id, task_ctx),
+            shuffle_writer.execute_shuffle_write(partition.partition_id, task_ctx),
         );
 
         self.abort_handles
@@ -121,7 +117,7 @@ impl Executor {
             &partition.job_id,
             partition.stage_id,
             partition.partition_id,
-            query_stage_exec.collect_plan_metrics(),
+            utils::collect_plan_metrics(shuffle_writer.as_ref())
         );
 
         Ok(partitions)
@@ -159,7 +155,6 @@ mod test {
     use ballista_core::serde::protobuf::ExecutorRegistration;
     use datafusion::execution::context::TaskContext;
 
-    use crate::execution_engine::QueryStageExecutor;
     use ballista_core::serde::scheduler::PartitionId;
     use datafusion::error::{DataFusionError, Result};
     use datafusion::physical_expr::PhysicalSortExpr;
@@ -266,7 +261,7 @@ mod test {
         )
         .expect("creating shuffle writer");
 
-        let query_stage_exec = QueryStageExecutor::new(shuffle_write);
+        let shuffle_write = Arc::new(shuffle_write);
 
         let executor_registration = ExecutorRegistration {
             id: "executor".to_string(),
@@ -290,7 +285,7 @@ mod test {
                 partition_id: 0,
             };
             let task_result = executor_clone
-                .execute_query_stage(1, part, Arc::new(query_stage_exec), ctx.task_ctx())
+                .execute_query_stage(1, part, shuffle_write, ctx.task_ctx())
                 .await;
             sender.send(task_result).expect("sending result");
         });

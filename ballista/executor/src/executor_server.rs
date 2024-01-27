@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use ballista_core::BALLISTA_VERSION;
+use ballista_core::{utils, BALLISTA_VERSION};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::{Path, PathBuf};
@@ -29,6 +29,7 @@ use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
 
 use ballista_core::error::BallistaError;
+use ballista_core::execution_plans::ShuffleWriterExec;
 use ballista_core::serde::protobuf::{
     executor_grpc_server::{ExecutorGrpc, ExecutorGrpcServer},
     executor_metric, executor_status,
@@ -44,6 +45,7 @@ use ballista_core::serde::scheduler::TaskDefinition;
 use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::{create_grpc_client_connection, create_grpc_server};
 use dashmap::DashMap;
+use datafusion::common::DataFusionError;
 use datafusion::config::ConfigOptions;
 use datafusion::execution::TaskContext;
 use datafusion::prelude::SessionConfig;
@@ -319,11 +321,24 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
             partition_id,
         };
 
-        let query_stage_exec = self
-            .executor
-            .execution_engine
-            .create_query_stage_exec(job_id.clone(), stage_id, plan, &self.executor.work_dir)
+        // the query plan created by the scheduler always starts with a ShuffleWriterExec
+        let shuffle_writer =
+            if let Some(shuffle_writer) = plan.as_any().downcast_ref::<ShuffleWriterExec>() {
+                // recreate the shuffle writer with the correct working directory
+                ShuffleWriterExec::try_new(
+                    job_id,
+                    stage_id,
+                    plan.children()[0].clone(),
+                    self.executor.work_dir.to_string(),
+                    shuffle_writer.shuffle_output_partitioning().cloned(),
+                )
+            } else {
+                Err(DataFusionError::Internal(
+                    "Plan is not a ShuffleWriterExec".to_string(),
+                ))
+            }
             .unwrap();
+        let shuffle_writer = Arc::new(shuffle_writer);
 
         let task_context = {
             let task_props = task.props;
@@ -352,17 +367,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
 
         let execution_result = self
             .executor
-            .execute_query_stage(
-                task_id,
-                part.clone(),
-                query_stage_exec.clone(),
-                task_context,
-            )
+            .execute_query_stage(task_id, part.clone(), shuffle_writer.clone(), task_context)
             .await;
         info!("Done with task {}", task_identity);
         debug!("Statistics: {:?}", execution_result);
 
-        let plan_metrics = query_stage_exec.collect_plan_metrics();
+        let plan_metrics = utils::collect_plan_metrics(shuffle_writer.as_ref());
         let operator_metrics = match plan_metrics
             .into_iter()
             .map(|m| m.try_into())
