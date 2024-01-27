@@ -119,21 +119,21 @@ impl ShuffleWriteMetrics {
 
 impl ShuffleWriterExec {
     /// Create a new shuffle writer
-    pub fn try_new(
+    pub fn new(
         job_id: String,
         stage_id: usize,
         plan: Arc<dyn ExecutionPlan>,
         work_dir: String,
         shuffle_output_partitioning: Option<Partitioning>,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             job_id,
             stage_id,
             plan,
             work_dir,
             shuffle_output_partitioning,
             metrics: ExecutionPlanMetricsSet::new(),
-        })
+        }
     }
 
     /// Get the Job ID for this query stage
@@ -353,13 +353,13 @@ impl ExecutionPlan for ShuffleWriterExec {
         self: Arc<Self>,
         children: Vec<Arc<dyn ExecutionPlan>>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        Ok(Arc::new(ShuffleWriterExec::try_new(
+        Ok(Arc::new(ShuffleWriterExec::new(
             self.job_id.clone(),
             self.stage_id,
             children[0].clone(),
             self.work_dir.clone(),
             self.shuffle_output_partitioning.clone(),
-        )?))
+        )))
     }
 
     fn execute(
@@ -462,13 +462,13 @@ mod tests {
 
         let input_plan = Arc::new(CoalescePartitionsExec::new(create_input_plan()?));
         let work_dir = TempDir::new()?;
-        let query_stage = ShuffleWriterExec::try_new(
+        let query_stage = ShuffleWriterExec::new(
             "jobOne".to_owned(),
             1,
             input_plan,
             work_dir.into_path().to_str().unwrap().to_owned(),
             Some(Partitioning::Hash(vec![Arc::new(Column::new("a", 0))], 2)),
-        )?;
+        );
         let mut stream = query_stage.execute(0, task_ctx)?;
         let batches = utils::collect_stream(&mut stream)
             .await
@@ -519,13 +519,13 @@ mod tests {
 
         let input_plan = create_input_plan()?;
         let work_dir = TempDir::new()?;
-        let query_stage = ShuffleWriterExec::try_new(
+        let query_stage = ShuffleWriterExec::new(
             "jobOne".to_owned(),
             1,
             input_plan,
             work_dir.into_path().to_str().unwrap().to_owned(),
             Some(Partitioning::Hash(vec![Arc::new(Column::new("a", 0))], 2)),
-        )?;
+        );
         let mut stream = query_stage.execute(0, task_ctx)?;
         let batches = utils::collect_stream(&mut stream)
             .await

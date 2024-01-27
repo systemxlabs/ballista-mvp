@@ -67,7 +67,7 @@ impl DistributedPlanner {
             self.next_stage_id(),
             new_plan,
             None,
-        )?);
+        ));
         Ok(stages)
     }
 
@@ -98,7 +98,7 @@ impl DistributedPlanner {
             .downcast_ref::<CoalescePartitionsExec>()
         {
             let shuffle_writer =
-                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None)?;
+                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None);
             let unresolved_shuffle = create_unresolved_shuffle(&shuffle_writer);
             stages.push(shuffle_writer);
             Ok((
@@ -110,7 +110,7 @@ impl DistributedPlanner {
             .downcast_ref::<SortPreservingMergeExec>()
         {
             let shuffle_writer =
-                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None)?;
+                create_shuffle_writer(job_id, self.next_stage_id(), children[0].clone(), None);
             let unresolved_shuffle = create_unresolved_shuffle(&shuffle_writer);
             stages.push(shuffle_writer);
             Ok((
@@ -125,7 +125,7 @@ impl DistributedPlanner {
                         self.next_stage_id(),
                         children[0].clone(),
                         Some(repart.partitioning().to_owned()),
-                    )?;
+                    );
                     let unresolved_shuffle = create_unresolved_shuffle(&shuffle_writer);
                     stages.push(shuffle_writer);
                     Ok((unresolved_shuffle, stages))
@@ -258,14 +258,14 @@ fn create_shuffle_writer(
     stage_id: usize,
     plan: Arc<dyn ExecutionPlan>,
     partitioning: Option<Partitioning>,
-) -> Result<Arc<ShuffleWriterExec>> {
-    Ok(Arc::new(ShuffleWriterExec::try_new(
+) -> Arc<ShuffleWriterExec> {
+    Arc::new(ShuffleWriterExec::new(
         job_id.to_owned(),
         stage_id,
         plan,
         "".to_owned(), // executor will decide on the work_dir path
         partitioning,
-    )?))
+    ))
 }
 
 #[cfg(test)]

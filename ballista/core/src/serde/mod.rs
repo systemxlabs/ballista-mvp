@@ -146,13 +146,13 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
                     input.schema().as_ref(),
                 )?;
 
-                Ok(Arc::new(ShuffleWriterExec::try_new(
+                Ok(Arc::new(ShuffleWriterExec::new(
                     shuffle_writer.job_id.clone(),
                     shuffle_writer.stage_id as usize,
                     input,
                     "".to_string(), // this is intentional but hacky - the executor will fill this in
                     shuffle_output_partitioning,
-                )?))
+                )))
             }
             PhysicalPlanType::ShuffleReader(shuffle_reader) => {
                 let stage_id = shuffle_reader.stage_id as usize;

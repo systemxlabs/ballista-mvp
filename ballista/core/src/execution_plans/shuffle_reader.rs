@@ -524,14 +524,13 @@ mod tests {
         let session_ctx = SessionContext::new();
         let task_ctx = session_ctx.task_ctx();
         let work_dir = TempDir::new().unwrap();
-        let input = ShuffleWriterExec::try_new(
+        let input = ShuffleWriterExec::new(
             "local_file".to_owned(),
             1,
             create_test_data_plan().unwrap(),
             work_dir.into_path().to_str().unwrap().to_owned(),
             Some(Partitioning::Hash(vec![Arc::new(Column::new("a", 0))], 1)),
-        )
-        .unwrap();
+        );
 
         let mut stream = input.execute(0, task_ctx).unwrap();
 

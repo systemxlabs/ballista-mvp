@@ -252,14 +252,13 @@ mod test {
             .into_string()
             .unwrap();
 
-        let shuffle_write = ShuffleWriterExec::try_new(
+        let shuffle_write = ShuffleWriterExec::new(
             "job-id".to_owned(),
             1,
             Arc::new(NeverendingOperator),
             work_dir.clone(),
             None,
-        )
-        .expect("creating shuffle writer");
+        );
 
         let shuffle_write = Arc::new(shuffle_write);
 

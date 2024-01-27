@@ -60,8 +60,6 @@ tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { version = "1.0", features = ["v4"] }
 
-[dev-dependencies]
-
 # use libc on unix like platforms to set worker priority in DedicatedExecutor
 [target."cfg(unix)".dependencies.libc]
 version = "0.2"

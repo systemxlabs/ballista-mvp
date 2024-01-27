@@ -325,13 +325,13 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
         let shuffle_writer =
             if let Some(shuffle_writer) = plan.as_any().downcast_ref::<ShuffleWriterExec>() {
                 // recreate the shuffle writer with the correct working directory
-                ShuffleWriterExec::try_new(
+                Ok(ShuffleWriterExec::new(
                     job_id,
                     stage_id,
                     plan.children()[0].clone(),
                     self.executor.work_dir.to_string(),
                     shuffle_writer.shuffle_output_partitioning().cloned(),
-                )
+                ))
             } else {
                 Err(DataFusionError::Internal(
                     "Plan is not a ShuffleWriterExec".to_string(),
