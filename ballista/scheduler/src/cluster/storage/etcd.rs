@@ -62,25 +62,6 @@ impl KeyValueStore for EtcdClient {
             .unwrap_or_default())
     }
 
-    async fn get_from_prefix(
-        &self,
-        keyspace: Keyspace,
-        prefix: &str,
-    ) -> Result<Vec<(String, Vec<u8>)>> {
-        let prefix = format!("/{}/{:?}/{}", self.namespace, keyspace, prefix);
-
-        Ok(self
-            .etcd
-            .clone()
-            .get(prefix, Some(GetOptions::new().with_prefix()))
-            .await
-            .map_err(|e| ballista_error(&format!("etcd error {e:?}")))?
-            .kvs()
-            .iter()
-            .map(|kv| (kv.key_str().unwrap().to_owned(), kv.value().to_owned()))
-            .collect())
-    }
-
     async fn scan(
         &self,
         keyspace: Keyspace,
@@ -166,35 +147,6 @@ impl KeyValueStore for EtcdClient {
             .map(|_| ())
     }
 
-    async fn mv(&self, from_keyspace: Keyspace, to_keyspace: Keyspace, key: &str) -> Result<()> {
-        let mut etcd = self.etcd.clone();
-        let from_key = format!("/{}/{:?}/{}", self.namespace, from_keyspace, key);
-        let to_key = format!("/{}/{:?}/{}", self.namespace, to_keyspace, key);
-
-        let current_value = etcd
-            .get(from_key.as_str(), None)
-            .await
-            .map_err(|e| ballista_error(&format!("etcd error {e:?}")))?
-            .kvs()
-            .first()
-            .map(|kv| kv.value().to_owned());
-
-        if let Some(value) = current_value {
-            let txn = Txn::new().and_then(vec![
-                TxnOp::delete(from_key.as_str(), None),
-                TxnOp::put(to_key.as_str(), value, None),
-            ]);
-            etcd.txn(txn).await.map_err(|e| {
-                error!("etcd put failed: {}", e);
-                ballista_error("etcd move failed")
-            })?;
-        } else {
-            warn!("Cannot move value at {}, does not exist", from_key);
-        }
-
-        Ok(())
-    }
-
     async fn lock(&self, keyspace: Keyspace, key: &str) -> Result<Box<dyn Lock>> {
         let start = Instant::now();
         let mut etcd = self.etcd.clone();
@@ -244,19 +196,6 @@ impl KeyValueStore for EtcdClient {
             stream,
             buffered_events: Vec::new(),
         }))
-    }
-
-    async fn delete(&self, keyspace: Keyspace, key: &str) -> Result<()> {
-        let key = format!("/{}/{:?}/{}", self.namespace, keyspace, key);
-
-        let mut etcd = self.etcd.clone();
-
-        etcd.delete(key, None).await.map_err(|e| {
-            warn!("etcd delete failed: {:?}", e);
-            ballista_error("etcd delete failed")
-        })?;
-
-        Ok(())
     }
 }
 

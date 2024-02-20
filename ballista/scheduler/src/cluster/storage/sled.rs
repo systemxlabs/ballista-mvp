@@ -75,27 +75,6 @@ impl KeyValueStore for SledClient {
             .unwrap_or_default())
     }
 
-    async fn get_from_prefix(
-        &self,
-        keyspace: Keyspace,
-        prefix: &str,
-    ) -> Result<Vec<(String, Vec<u8>)>> {
-        let prefix = format!("/{keyspace:?}/{prefix}");
-        Ok(self
-            .db
-            .scan_prefix(prefix)
-            .map(|v| {
-                v.map(|(key, value)| {
-                    (
-                        std::str::from_utf8(&key).unwrap().to_owned(),
-                        value.to_vec(),
-                    )
-                })
-            })
-            .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| ballista_error(&format!("sled error {e:?}")))?)
-    }
-
     async fn scan(
         &self,
         keyspace: Keyspace,
@@ -180,33 +159,6 @@ impl KeyValueStore for SledClient {
         })
     }
 
-    async fn mv(&self, from_keyspace: Keyspace, to_keyspace: Keyspace, key: &str) -> Result<()> {
-        let from_key = format!("/{from_keyspace:?}/{key}");
-        let to_key = format!("/{to_keyspace:?}/{key}");
-
-        let current_value = self
-            .db
-            .get(from_key.as_str())
-            .map_err(|e| ballista_error(&format!("sled error {e:?}")))?
-            .map(|v| v.to_vec());
-
-        if let Some(value) = current_value {
-            let mut batch = sled::Batch::default();
-
-            batch.remove(from_key.as_str());
-            batch.insert(to_key.as_str(), value);
-
-            self.db.apply_batch(batch).map_err(|e| {
-                warn!("sled transaction insert failed: {}", e);
-                ballista_error("sled insert failed")
-            })
-        } else {
-            // TODO should this return an error?
-            warn!("Cannot move value at {}, does not exist", from_key);
-            Ok(())
-        }
-    }
-
     async fn lock(&self, keyspace: Keyspace, key: &str) -> Result<Box<dyn Lock>> {
         let mut mlock = self.locks.lock().await;
         let lock_key = format!("/{keyspace:?}/{key}");
@@ -225,15 +177,6 @@ impl KeyValueStore for SledClient {
         Ok(Box::new(SledWatch {
             subscriber: self.db.watch_prefix(prefix),
         }))
-    }
-
-    async fn delete(&self, keyspace: Keyspace, key: &str) -> Result<()> {
-        let key = format!("/{keyspace:?}/{key}");
-        self.db.remove(key).map_err(|e| {
-            warn!("sled delete failed: {:?}", e);
-            ballista_error("sled delete failed")
-        })?;
-        Ok(())
     }
 }
 
@@ -300,58 +243,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn multiple_operation() -> Result<(), Box<dyn std::error::Error>> {
-        let client = create_instance()?;
-        let key = "key".to_string();
-        let value = "value".as_bytes().to_vec();
-        {
-            let _locks = client
-                .acquire_locks(vec![(Keyspace::JobStatus, ""), (Keyspace::Slots, "")])
-                .await?;
-
-            let txn_ops = vec![
-                (Operation::Put(value.clone()), Keyspace::Slots, key.clone()),
-                (
-                    Operation::Put(value.clone()),
-                    Keyspace::JobStatus,
-                    key.clone(),
-                ),
-            ];
-            client.apply_txn(txn_ops).await?;
-        }
-
-        assert_eq!(client.get(Keyspace::Slots, key.as_str()).await?, value);
-        assert_eq!(client.get(Keyspace::JobStatus, key.as_str()).await?, value);
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn read_empty() -> Result<(), Box<dyn std::error::Error>> {
         let client = create_instance()?;
         let key = "key";
         let empty: &[u8] = &[];
         assert_eq!(client.get(Keyspace::Slots, key).await?, empty);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn read_prefix() -> Result<(), Box<dyn std::error::Error>> {
-        let client = create_instance()?;
-        let key = "key";
-        let value = "value".as_bytes();
-        client
-            .put(Keyspace::Slots, format!("{key}/1"), value.to_vec())
-            .await?;
-        client
-            .put(Keyspace::Slots, format!("{key}/2"), value.to_vec())
-            .await?;
-        assert_eq!(
-            client.get_from_prefix(Keyspace::Slots, key).await?,
-            vec![
-                ("/Slots/key/1".to_owned(), value.to_vec()),
-                ("/Slots/key/2".to_owned(), value.to_vec())
-            ]
-        );
         Ok(())
     }
 
