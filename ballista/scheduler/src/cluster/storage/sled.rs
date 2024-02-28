@@ -221,7 +221,7 @@ impl Stream for SledWatch {
 mod tests {
     use super::{KeyValueStore, SledClient, Watch, WatchEvent};
 
-    use crate::cluster::storage::{Keyspace, Operation};
+    use crate::cluster::storage::Keyspace;
 
     use futures::StreamExt;
     use std::result::Result;

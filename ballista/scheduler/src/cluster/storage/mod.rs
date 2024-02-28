@@ -20,7 +20,7 @@ pub mod sled;
 
 use async_trait::async_trait;
 use ballista_core::error::Result;
-use futures::{future, Stream};
+use futures::Stream;
 use std::collections::HashSet;
 use tokio::sync::OwnedMutexGuard;
 
