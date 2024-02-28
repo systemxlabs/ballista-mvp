@@ -34,14 +34,11 @@ path = "src/bin/main.rs"
 anyhow = "1"
 arrow = { workspace = true }
 arrow-flight = { workspace = true }
-async-trait = "0.1.41"
 ballista-core = { path = "../core", version = "0.11.0" }
-chrono = { version = "0.4", default-features = false }
 dashmap = "5.4.0"
 datafusion = { workspace = true }
 datafusion-proto = { workspace = true }
 futures = "0.3"
-hyper = "0.14.4"
 log = "0.4"
 num_cpus = "1.13.0"
 parking_lot = "0.12"
@@ -56,7 +53,6 @@ tokio = { version = "1.0", features = [
 tokio-stream = { version = "0.1", features = ["net"] }
 tonic = { workspace = true }
 tracing = { workspace = true }
-tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { version = "1.0", features = ["v4"] }
 

@@ -15,7 +15,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![doc = include_str!("../README.md")]
-
 pub mod context;
 pub mod prelude;

@@ -35,5 +35,3 @@ futures = "0.3"
 log = "0.4"
 parking_lot = "0.12"
 sqlparser = { workspace = true }
-tempfile = "3"
-tokio = "1.0"
