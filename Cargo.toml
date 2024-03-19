@@ -17,8 +17,6 @@
 
 [workspace]
 members = [
-    "ballista-cli",
-    "ballista/client",
     "ballista/core",
     "ballista/executor",
     "ballista/scheduler",
