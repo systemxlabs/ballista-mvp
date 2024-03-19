@@ -99,6 +99,3 @@ dev/dist
 
 # logs
 logs/
-
-# testing data
-testdata/*

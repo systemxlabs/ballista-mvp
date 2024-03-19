@@ -17,6 +17,24 @@
   under the License.
 -->
 
+# Run locally
+1. install flight sql client
+```shell
+git clone https://github.com/apache/arrow-rs.git
+cd arrow-rs/arrow-flight
+cargo install --features=cli,flight-sql-experimental,tls,arrow-ipc/lz4 --bin=flight_sql_client --path=. --locked 
+```
+2. start scheduler & executor
+```shell
+BIND_PORT=50050 cargo run --bin ballista-scheduler -r
+BIND_PORT=50051 BIND_GRPC_PORT=50052 cargo run --bin ballista-executor -r
+BIND_PORT=50061 BIND_GRPC_PORT=50062 cargo run --bin ballista-executor -r
+```
+3. execute query
+```shell
+flight_sql_client --host localhost --port 50050 --username admin --password password statement-query "select 1;"
+```
+
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow
 
 Ballista is a distributed SQL query engine powered by the Rust implementation of [Apache Arrow][arrow] and
