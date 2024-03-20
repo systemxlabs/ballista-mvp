@@ -455,49 +455,6 @@ message UpdateTaskStatusResult {
   bool success = 1;
 }
 
-message ExecuteQueryParams {
-  oneof query {
-    bytes logical_plan = 1;
-    string sql = 2;
-  }
-  oneof optional_session_id {
-    string session_id = 3;
-  }
-  repeated KeyValuePair settings = 4;
-}
-
-message CreateSessionParams {
-  repeated KeyValuePair settings = 1;
-}
-
-message CreateSessionResult {
-  string session_id = 1;
-}
-
-message ExecuteQueryResult {
-  oneof result {
-    ExecuteQuerySuccessResult success = 1;
-    ExecuteQueryFailureResult failure = 2;
-  }
-}
-
-message ExecuteQuerySuccessResult {
-  string job_id = 1;
-  string session_id = 2;
-}
-
-message ExecuteQueryFailureResult {
-  oneof failure {
-    string session_not_found = 1;
-    string plan_parsing_failure = 2;
-    string sql_parsing_failure = 3;
-  }
-}
-
-message GetJobStatusParams {
-  string job_id = 1;
-}
-
 message SuccessfulJob {
   repeated PartitionLocation partition_location = 1;
   uint64 queued_at = 2;
@@ -532,18 +489,6 @@ message JobStatus {
     FailedJob failed = 3;
     SuccessfulJob successful = 4;
   }
-}
-
-message GetJobStatusResult {
-  JobStatus status = 1;
-}
-
-message CancelJobParams {
-  string job_id = 1;
-}
-
-message CancelJobResult {
-  bool cancelled = 1;
 }
 
 message CleanJobDataParams {
@@ -594,14 +539,6 @@ service SchedulerGrpc {
   rpc HeartBeatFromExecutor (HeartBeatParams) returns (HeartBeatResult) {}
 
   rpc UpdateTaskStatus (UpdateTaskStatusParams) returns (UpdateTaskStatusResult) {}
-
-  rpc CreateSession (CreateSessionParams) returns (CreateSessionResult) {}
-
-  rpc ExecuteQuery (ExecuteQueryParams) returns (ExecuteQueryResult) {}
-
-  rpc GetJobStatus (GetJobStatusParams) returns (GetJobStatusResult) {}
-
-  rpc CancelJob (CancelJobParams) returns (CancelJobResult) {}
 
   rpc CleanJobData (CleanJobDataParams) returns (CleanJobDataResult) {}
 }

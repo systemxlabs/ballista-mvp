@@ -15,25 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use ballista_core::config::BallistaConfig;
-use ballista_core::serde::protobuf::execute_query_params::{OptionalSessionId, Query};
-use std::collections::HashMap;
-
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    execute_query_failure_result, execute_query_result, CancelJobParams, CancelJobResult,
-    CleanJobDataParams, CleanJobDataResult, CreateSessionParams, CreateSessionResult,
-    ExecuteQueryFailureResult, ExecuteQueryParams, ExecuteQueryResult, ExecuteQuerySuccessResult,
-    ExecutorHeartbeat, GetJobStatusParams, GetJobStatusResult, HeartBeatParams, HeartBeatResult,
+    CleanJobDataParams, CleanJobDataResult, ExecutorHeartbeat, HeartBeatParams, HeartBeatResult,
     RegisterExecutorParams, RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
-use log::{debug, error, info, trace, warn};
-
-use std::ops::Deref;
+use log::{debug, error, info, warn};
 
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -166,200 +157,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
             })?;
 
         Ok(Response::new(UpdateTaskStatusResult { success: true }))
-    }
-
-    async fn create_session(
-        &self,
-        request: Request<CreateSessionParams>,
-    ) -> Result<Response<CreateSessionResult>, Status> {
-        let session_params = request.into_inner();
-        // parse config
-        let mut config_builder = BallistaConfig::builder();
-        for kv_pair in &session_params.settings {
-            config_builder = config_builder.set(&kv_pair.key, &kv_pair.value);
-        }
-        let config = config_builder.build().map_err(|e| {
-            let msg = format!("Could not parse configs: {e}");
-            error!("{}", msg);
-            Status::internal(msg)
-        })?;
-
-        let ctx = self
-            .state
-            .session_manager
-            .create_session(&config)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to create SessionContext: {e:?}")))?;
-
-        Ok(Response::new(CreateSessionResult {
-            session_id: ctx.session_id(),
-        }))
-    }
-
-    async fn execute_query(
-        &self,
-        request: Request<ExecuteQueryParams>,
-    ) -> Result<Response<ExecuteQueryResult>, Status> {
-        let query_params = request.into_inner();
-        if let ExecuteQueryParams {
-            query: Some(query),
-            optional_session_id,
-            settings,
-        } = query_params
-        {
-            let mut query_settings = HashMap::new();
-            for kv_pair in settings {
-                query_settings.insert(kv_pair.key, kv_pair.value);
-            }
-
-            let (session_id, session_ctx) = match optional_session_id {
-                Some(OptionalSessionId::SessionId(session_id)) => {
-                    match self.state.session_manager.get_session(&session_id).await {
-                        Ok(ctx) => (session_id, ctx),
-                        Err(e) => {
-                            let msg = format!(
-                                "Failed to load SessionContext for session ID {session_id}: {e}"
-                            );
-                            error!("{}", msg);
-                            return Ok(Response::new(ExecuteQueryResult {
-                                result: Some(execute_query_result::Result::Failure(
-                                    ExecuteQueryFailureResult {
-                                        failure: Some(
-                                            execute_query_failure_result::Failure::SessionNotFound(
-                                                msg,
-                                            ),
-                                        ),
-                                    },
-                                )),
-                            }));
-                        }
-                    }
-                }
-                _ => {
-                    // Create default config
-                    let config = BallistaConfig::builder().build().map_err(|e| {
-                        let msg = format!("Could not parse configs: {e}");
-                        error!("{}", msg);
-                        Status::internal(msg)
-                    })?;
-                    let ctx = self
-                        .state
-                        .session_manager
-                        .create_session(&config)
-                        .await
-                        .map_err(|e| {
-                            Status::internal(format!("Failed to create SessionContext: {e:?}"))
-                        })?;
-
-                    (ctx.session_id(), ctx)
-                }
-            };
-
-            let plan = match query {
-                Query::LogicalPlan(message) => {
-                    match T::try_decode(message.as_slice()).and_then(|m| {
-                        m.try_into_logical_plan(
-                            session_ctx.deref(),
-                            self.state.codec.logical_extension_codec(),
-                        )
-                    }) {
-                        Ok(plan) => plan,
-                        Err(e) => {
-                            let msg = format!("Could not parse logical plan protobuf: {e}");
-                            error!("{}", msg);
-                            return Ok(Response::new(ExecuteQueryResult {
-                                result: Some(execute_query_result::Result::Failure(
-                                    ExecuteQueryFailureResult {
-                                        failure: Some(execute_query_failure_result::Failure::PlanParsingFailure(msg)),
-                                    },
-                                )),
-                            }));
-                        }
-                    }
-                }
-                Query::Sql(sql) => {
-                    match session_ctx
-                        .sql(&sql)
-                        .await
-                        .and_then(|df| df.into_optimized_plan())
-                    {
-                        Ok(plan) => plan,
-                        Err(e) => {
-                            let msg = format!("Error parsing SQL: {e}");
-                            error!("{}", msg);
-                            return Ok(Response::new(ExecuteQueryResult {
-                                result: Some(execute_query_result::Result::Failure(
-                                    ExecuteQueryFailureResult {
-                                        failure: Some(execute_query_failure_result::Failure::PlanParsingFailure(msg)),
-                                    },
-                                )),
-                            }));
-                        }
-                    }
-                }
-            };
-
-            debug!("Received plan for execution: {:?}", plan);
-
-            let job_id = self.state.task_manager.generate_job_id();
-
-            self.submit_job(&job_id, session_ctx, &plan)
-                .await
-                .map_err(|e| {
-                    let msg = format!("Failed to send JobQueued event for {job_id}: {e:?}");
-                    error!("{}", msg);
-
-                    Status::internal(msg)
-                })?;
-
-            Ok(Response::new(ExecuteQueryResult {
-                result: Some(execute_query_result::Result::Success(
-                    ExecuteQuerySuccessResult { job_id, session_id },
-                )),
-            }))
-        } else {
-            Err(Status::internal("Error parsing request"))
-        }
-    }
-
-    async fn get_job_status(
-        &self,
-        request: Request<GetJobStatusParams>,
-    ) -> Result<Response<GetJobStatusResult>, Status> {
-        let job_id = request.into_inner().job_id;
-        trace!("Received get_job_status request for job {}", job_id);
-        match self.state.task_manager.get_job_status(&job_id).await {
-            Ok(status) => Ok(Response::new(GetJobStatusResult { status })),
-            Err(e) => {
-                let msg = format!("Error getting status for job {job_id}: {e:?}");
-                error!("{}", msg);
-                Err(Status::internal(msg))
-            }
-        }
-    }
-
-    async fn cancel_job(
-        &self,
-        request: Request<CancelJobParams>,
-    ) -> Result<Response<CancelJobResult>, Status> {
-        let job_id = request.into_inner().job_id;
-        info!("Received cancellation request for job {}", job_id);
-
-        self.query_stage_event_loop
-            .get_sender()
-            .map_err(|e| {
-                let msg = format!("Get query stage event loop error due to {e:?}");
-                error!("{}", msg);
-                Status::internal(msg)
-            })?
-            .post_event(QueryStageSchedulerEvent::JobCancel(job_id))
-            .await
-            .map_err(|e| {
-                let msg = format!("Post to query stage event loop error due to {e:?}");
-                error!("{}", msg);
-                Status::internal(msg)
-            })?;
-        Ok(Response::new(CancelJobResult { cancelled: true }))
     }
 
     async fn clean_job_data(
