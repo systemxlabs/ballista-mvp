@@ -18,11 +18,9 @@
 -->
 
 # Run locally
-1. install flight sql client
+1. install flight sql cli
 ```shell
-git clone https://github.com/apache/arrow-rs.git
-cd arrow-rs/arrow-flight
-cargo install --features=cli,flight-sql-experimental,tls,arrow-ipc/lz4 --bin=flight_sql_client --path=. --locked 
+cargo install arrow_cli
 ```
 2. start scheduler & executor
 ```shell
@@ -32,7 +30,9 @@ BIND_PORT=50061 BIND_GRPC_PORT=50062 cargo run --bin ballista-executor -r
 ```
 3. execute query
 ```shell
-flight_sql_client --host localhost --port 50050 --username admin --password password statement-query "select 1;"
+arrow_cli --host localhost --port 50050 --username admin --password password
+> create external table lineitem stored as parquet location '<ProjectRoot>/testdata/small_lineitem';
+> select count(1) from lineitem;
 ```
 
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow

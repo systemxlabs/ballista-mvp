@@ -491,13 +491,6 @@ message JobStatus {
   }
 }
 
-message CleanJobDataParams {
-  string job_id = 1;
-}
-
-message CleanJobDataResult {
-}
-
 message LaunchMultiTaskParams {
   // Allow to launch a task set to an executor at once
   repeated MultiTaskDefinition multi_tasks = 1;
@@ -539,8 +532,6 @@ service SchedulerGrpc {
   rpc HeartBeatFromExecutor (HeartBeatParams) returns (HeartBeatResult) {}
 
   rpc UpdateTaskStatus (UpdateTaskStatusParams) returns (UpdateTaskStatusResult) {}
-
-  rpc CleanJobData (CleanJobDataParams) returns (CleanJobDataResult) {}
 }
 
 service ExecutorGrpc {

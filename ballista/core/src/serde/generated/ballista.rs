@@ -818,15 +818,6 @@ pub mod job_status {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CleanJobDataParams {
-    #[prost(string, tag = "1")]
-    pub job_id: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CleanJobDataResult {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LaunchMultiTaskParams {
     /// Allow to launch a task set to an executor at once
     #[prost(message, repeated, tag = "1")]
@@ -1048,33 +1039,6 @@ pub mod scheduler_grpc_client {
                         "ballista.protobuf.SchedulerGrpc",
                         "UpdateTaskStatus",
                     ),
-                );
-            self.inner.unary(req, path, codec).await
-        }
-        pub async fn clean_job_data(
-            &mut self,
-            request: impl tonic::IntoRequest<super::CleanJobDataParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::CleanJobDataResult>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ballista.protobuf.SchedulerGrpc/CleanJobData",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("ballista.protobuf.SchedulerGrpc", "CleanJobData"),
                 );
             self.inner.unary(req, path, codec).await
         }
@@ -1302,13 +1266,6 @@ pub mod scheduler_grpc_server {
             tonic::Response<super::UpdateTaskStatusResult>,
             tonic::Status,
         >;
-        async fn clean_job_data(
-            &self,
-            request: tonic::Request<super::CleanJobDataParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::CleanJobDataResult>,
-            tonic::Status,
-        >;
     }
     #[derive(Debug)]
     pub struct SchedulerGrpcServer<T: SchedulerGrpc> {
@@ -1518,52 +1475,6 @@ pub mod scheduler_grpc_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = UpdateTaskStatusSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/ballista.protobuf.SchedulerGrpc/CleanJobData" => {
-                    #[allow(non_camel_case_types)]
-                    struct CleanJobDataSvc<T: SchedulerGrpc>(pub Arc<T>);
-                    impl<
-                        T: SchedulerGrpc,
-                    > tonic::server::UnaryService<super::CleanJobDataParams>
-                    for CleanJobDataSvc<T> {
-                        type Response = super::CleanJobDataResult;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::CleanJobDataParams>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as SchedulerGrpc>::clean_job_data(&inner, request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = CleanJobDataSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

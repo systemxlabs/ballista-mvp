@@ -17,7 +17,7 @@
 
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    CleanJobDataParams, CleanJobDataResult, ExecutorHeartbeat, HeartBeatParams, HeartBeatResult,
+    ExecutorHeartbeat, HeartBeatParams, HeartBeatResult,
     RegisterExecutorParams, RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
@@ -26,7 +26,6 @@ use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
 use log::{debug, error, info, warn};
 
-use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{Request, Response, Status};
 
@@ -157,30 +156,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
             })?;
 
         Ok(Response::new(UpdateTaskStatusResult { success: true }))
-    }
-
-    async fn clean_job_data(
-        &self,
-        request: Request<CleanJobDataParams>,
-    ) -> Result<Response<CleanJobDataResult>, Status> {
-        let job_id = request.into_inner().job_id;
-        info!("Received clean data request for job {}", job_id);
-
-        self.query_stage_event_loop
-            .get_sender()
-            .map_err(|e| {
-                let msg = format!("Get query stage event loop error due to {e:?}");
-                error!("{}", msg);
-                Status::internal(msg)
-            })?
-            .post_event(QueryStageSchedulerEvent::JobDataClean(job_id))
-            .await
-            .map_err(|e| {
-                let msg = format!("Post to query stage event loop error due to {e:?}");
-                error!("{}", msg);
-                Status::internal(msg)
-            })?;
-        Ok(Response::new(CleanJobDataResult {}))
     }
 }
 
