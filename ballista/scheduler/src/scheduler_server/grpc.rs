@@ -17,8 +17,8 @@
 
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    ExecutorHeartbeat, HeartBeatParams, HeartBeatResult,
-    RegisterExecutorParams, RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
+    ExecutorHeartbeat, HeartBeatParams, HeartBeatResult, RegisterExecutorParams,
+    RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
