@@ -34,6 +34,7 @@ exclude = ["*.proto"]
 rustc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+arrow = { workspace = true }
 arrow-flight = { workspace = true }
 async-trait = "0.1.41"
 chrono = { version = "0.4", default-features = false }
