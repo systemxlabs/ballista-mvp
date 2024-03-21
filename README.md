@@ -30,9 +30,10 @@ BIND_PORT=50061 BIND_GRPC_PORT=50062 cargo run --bin ballista-executor -r
 ```
 3. execute query
 ```shell
-arrow_cli --host localhost --port 50050 --username admin --password password
+arrow_cli --host localhost --port 50050 --user admin --password password
 > create external table lineitem stored as parquet location '<ProjectRoot>/testdata/small_lineitem';
 > select count(1) from lineitem;
+> select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where  l_shipdate <= date '1998-09-02' group by  l_returnflag, l_linestatus order by   l_returnflag,  l_linestatus;
 ```
 
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow
