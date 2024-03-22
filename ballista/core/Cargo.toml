@@ -34,6 +34,11 @@ exclude = ["*.proto"]
 rustc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+# ahash 0.8.11 will make unit tests in shuffle_writer.rs failed as the hash value of 1 and 2 has changed.
+# seed 0,0,0,0, two buckets
+# ahash 0.8.10  1 -> 11003429890058878283, 2 -> 12908271710217070096  1 and 2 will be distributed into different bucket
+# ahash 0.8.11  1 -> 11678494436396399123, 2 -> 14037173625081469373  1 and 2 will be distributed into same bucket
+ahash = "=0.8.10"
 arrow = { workspace = true }
 arrow-flight = { workspace = true }
 async-trait = "0.1.41"
