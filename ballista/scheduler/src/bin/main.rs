@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
         external_host: env::var("EXTERNAL_HOST").unwrap_or("localhost".to_string()),
         bind_port,
         event_loop_buffer_size: 10000,
-        task_distribution: TaskDistributionPolicy::Bias,
+        task_distribution: TaskDistributionPolicy::RoundRobin,
         finished_job_data_clean_up_interval_seconds: 300,
         finished_job_state_clean_up_interval_seconds: 3600,
         advertise_flight_sql_endpoint: None,
