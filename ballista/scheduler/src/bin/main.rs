@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
 
     let config = SchedulerConfig {
         namespace: "ballista".to_string(),
-        external_host: "localhost".to_string(),
+        external_host: env::var("EXTERNAL_HOST").unwrap_or("localhost".to_string()),
         bind_port,
         event_loop_buffer_size: 10000,
         task_distribution: TaskDistributionPolicy::Bias,
