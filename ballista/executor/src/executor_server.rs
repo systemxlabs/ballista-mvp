@@ -32,12 +32,11 @@ use ballista_core::error::BallistaError;
 use ballista_core::execution_plans::ShuffleWriterExec;
 use ballista_core::serde::protobuf::{
     executor_grpc_server::{ExecutorGrpc, ExecutorGrpcServer},
-    executor_metric, executor_status,
+    executor_status,
     scheduler_grpc_client::SchedulerGrpcClient,
-    CancelTasksParams, CancelTasksResult, ExecutorMetric, ExecutorStatus, HeartBeatParams,
-    LaunchMultiTaskParams, LaunchMultiTaskResult, RegisterExecutorParams, RemoveJobDataParams,
-    RemoveJobDataResult, StopExecutorParams, StopExecutorResult, TaskStatus,
-    UpdateTaskStatusParams,
+    CancelTasksParams, CancelTasksResult, ExecutorStatus, HeartBeatParams, LaunchMultiTaskParams,
+    LaunchMultiTaskResult, RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult,
+    StopExecutorParams, StopExecutorResult, TaskStatus, UpdateTaskStatusParams,
 };
 use ballista_core::serde::scheduler::from_proto::get_task_definition_vec;
 use ballista_core::serde::scheduler::PartitionId;
@@ -255,7 +254,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
 
         let heartbeat_params = HeartBeatParams {
             executor_id: self.executor.metadata.id.clone(),
-            metrics: self.get_executor_metrics(),
             status: Some(ExecutorStatus {
                 status: Some(status),
             }),
@@ -412,15 +410,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
             })
             .await
             .unwrap();
-    }
-
-    // TODO populate with real metrics
-    fn get_executor_metrics(&self) -> Vec<ExecutorMetric> {
-        let available_memory = ExecutorMetric {
-            metric: Some(executor_metric::Metric::AvailableMemory(u64::MAX)),
-        };
-        let executor_metrics = vec![available_memory];
-        executor_metrics
     }
 }
 

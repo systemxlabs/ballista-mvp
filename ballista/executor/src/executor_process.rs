@@ -211,7 +211,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         if let Err(error) = scheduler
             .heart_beat_from_executor(HeartBeatParams {
                 executor_id: executor_id.clone(),
-                metrics: vec![],
                 status: Some(ExecutorStatus {
                     status: Some(Status::Terminating(String::default())),
                 }),

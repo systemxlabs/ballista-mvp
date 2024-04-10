@@ -266,7 +266,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         self.save_executor_heartbeat(ExecutorHeartbeat {
             executor_id: executor_id.clone(),
             timestamp: timestamp_secs(),
-            metrics: vec![],
             status: Some(protobuf::ExecutorStatus {
                 status: Some(protobuf::executor_status::Status::Active(String::default())),
             }),
@@ -357,7 +356,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         let value = ExecutorHeartbeat {
             executor_id: executor_id.to_owned(),
             timestamp: timestamp_secs(),
-            metrics: vec![],
             status: Some(protobuf::ExecutorStatus {
                 status: Some(protobuf::executor_status::Status::Dead("".to_string())),
             }),

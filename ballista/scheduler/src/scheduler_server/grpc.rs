@@ -73,7 +73,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
         let remote_addr = request.remote_addr();
         let HeartBeatParams {
             executor_id,
-            metrics,
             status,
             metadata,
         } = request.into_inner();
@@ -114,7 +113,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
                 .duration_since(UNIX_EPOCH)
                 .expect("Time went backwards")
                 .as_secs(),
-            metrics,
             status,
         };
 
@@ -207,7 +205,6 @@ mod test {
 
         let request: Request<HeartBeatParams> = Request::new(HeartBeatParams {
             executor_id: exec_meta.id.clone(),
-            metrics: vec![],
             status: Some(ExecutorStatus {
                 status: Some(executor_status::Status::Active("".to_string())),
             }),
@@ -286,7 +283,6 @@ mod test {
         // heartbeat from the executor
         let request: Request<HeartBeatParams> = Request::new(HeartBeatParams {
             executor_id: "abc".to_owned(),
-            metrics: vec![],
             status: Some(ExecutorStatus {
                 status: Some(executor_status::Status::Active("".to_string())),
             }),

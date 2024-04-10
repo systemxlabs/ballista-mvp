@@ -287,15 +287,7 @@ message ExecutorHeartbeat {
   string executor_id = 1;
   // Unix epoch-based timestamp in seconds
   uint64 timestamp = 2;
-  repeated ExecutorMetric metrics = 3;
   ExecutorStatus status = 4;
-}
-
-message ExecutorMetric {
-  // TODO add more metrics
-  oneof metric {
-    uint64 available_memory = 1;
-  }
 }
 
 message ExecutorStatus {
@@ -426,9 +418,8 @@ message RegisterExecutorResult {
 
 message HeartBeatParams {
   string executor_id = 1;
-  repeated ExecutorMetric metrics = 2;
-  ExecutorStatus status = 3;
-  ExecutorRegistration metadata = 4;
+  ExecutorStatus status = 2;
+  ExecutorRegistration metadata = 3;
 }
 
 message HeartBeatResult {

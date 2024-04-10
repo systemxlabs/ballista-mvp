@@ -463,27 +463,8 @@ pub struct ExecutorHeartbeat {
     /// Unix epoch-based timestamp in seconds
     #[prost(uint64, tag = "2")]
     pub timestamp: u64,
-    #[prost(message, repeated, tag = "3")]
-    pub metrics: ::prost::alloc::vec::Vec<ExecutorMetric>,
     #[prost(message, optional, tag = "4")]
     pub status: ::core::option::Option<ExecutorStatus>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutorMetric {
-    /// TODO add more metrics
-    #[prost(oneof = "executor_metric::Metric", tags = "1")]
-    pub metric: ::core::option::Option<executor_metric::Metric>,
-}
-/// Nested message and enum types in `ExecutorMetric`.
-pub mod executor_metric {
-    /// TODO add more metrics
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Metric {
-        #[prost(uint64, tag = "1")]
-        AvailableMemory(u64),
-    }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -712,11 +693,9 @@ pub struct RegisterExecutorResult {
 pub struct HeartBeatParams {
     #[prost(string, tag = "1")]
     pub executor_id: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag = "2")]
-    pub metrics: ::prost::alloc::vec::Vec<ExecutorMetric>,
-    #[prost(message, optional, tag = "3")]
+    #[prost(message, optional, tag = "2")]
     pub status: ::core::option::Option<ExecutorStatus>,
-    #[prost(message, optional, tag = "4")]
+    #[prost(message, optional, tag = "3")]
     pub metadata: ::core::option::Option<ExecutorRegistration>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

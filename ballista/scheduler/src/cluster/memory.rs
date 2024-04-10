@@ -116,7 +116,6 @@ impl ClusterState for InMemoryClusterState {
         self.save_executor_heartbeat(ExecutorHeartbeat {
             executor_id: executor_id.clone(),
             timestamp: timestamp_secs(),
-            metrics: vec![],
             status: Some(ExecutorStatus {
                 status: Some(executor_status::Status::Active(String::default())),
             }),
