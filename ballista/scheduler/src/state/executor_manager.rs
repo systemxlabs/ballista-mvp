@@ -28,8 +28,7 @@ use crate::state::execution_graph::RunningTaskInfo;
 use crate::state::task_manager::JobInfoCache;
 use ballista_core::serde::protobuf::executor_grpc_client::ExecutorGrpcClient;
 use ballista_core::serde::protobuf::{
-    executor_status, CancelTasksParams, ExecutorHeartbeat, MultiTaskDefinition,
-    RemoveJobDataParams,
+    executor_status, CancelTasksParams, ExecutorHeartbeat, MultiTaskDefinition, RemoveJobDataParams,
 };
 use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use ballista_core::utils::{create_grpc_client_connection, get_time_before};
