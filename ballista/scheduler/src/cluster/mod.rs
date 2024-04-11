@@ -44,7 +44,6 @@ use crate::scheduler_server::SessionBuilder;
 use crate::state::execution_graph::{create_task_info, ExecutionGraph, TaskDescription};
 use crate::state::task_manager::JobInfoCache;
 
-pub mod event;
 pub mod kv;
 pub mod memory;
 pub mod storage;
@@ -67,10 +66,10 @@ impl BallistaCluster {
         }
     }
 
-    pub fn new_memory(scheduler: impl Into<String>, session_builder: SessionBuilder) -> Self {
+    pub fn new_memory(session_builder: SessionBuilder) -> Self {
         Self {
             cluster_state: Arc::new(InMemoryClusterState::default()),
-            job_state: Arc::new(InMemoryJobState::new(scheduler, session_builder)),
+            job_state: Arc::new(InMemoryJobState::new(session_builder)),
         }
     }
 
@@ -129,10 +128,9 @@ impl BallistaCluster {
                     ))
                 }
             }
-            ClusterStorageConfig::Memory => Ok(BallistaCluster::new_memory(
-                scheduler,
-                default_session_builder,
-            )),
+            ClusterStorageConfig::Memory => {
+                Ok(BallistaCluster::new_memory(default_session_builder))
+            }
         }
     }
 
@@ -203,47 +201,6 @@ pub trait ClusterState: Send + Sync + 'static {
     fn get_executor_heartbeat(&self, executor_id: &str) -> Option<ExecutorHeartbeat>;
 }
 
-/// Events related to the state of jobs. Implementations may or may not support all event types.
-#[derive(Debug, Clone, PartialEq)]
-pub enum JobStateEvent {
-    /// Event when a job status has been updated
-    JobUpdated {
-        /// Job ID of updated job
-        job_id: String,
-        /// New job status
-        status: JobStatus,
-    },
-    /// Event when a scheduler acquires ownership of the job. This happens
-    /// either when a scheduler submits a job (in which case ownership is implied)
-    /// or when a scheduler acquires ownership of a running job release by a
-    /// different scheduler
-    JobAcquired {
-        /// Job ID of the acquired job
-        job_id: String,
-        /// The scheduler which acquired ownership of the job
-        owner: String,
-    },
-    /// Event when a scheduler releases ownership of a still active job
-    JobReleased {
-        /// Job ID of the released job
-        job_id: String,
-    },
-    /// Event when a new session has been created
-    SessionCreated {
-        session_id: String,
-        config: BallistaConfig,
-    },
-    /// Event when a session configuration has been updated
-    SessionUpdated {
-        session_id: String,
-        config: BallistaConfig,
-    },
-}
-
-/// Stream of `JobStateEvent`. This stream should contain all `JobStateEvent`s received
-/// by any schedulers with a shared `ClusterState`
-pub type JobStateEventStream = Pin<Box<dyn Stream<Item = JobStateEvent> + Send>>;
-
 /// A trait that contains the necessary methods for persisting state related to executing jobs
 #[tonic::async_trait]
 pub trait JobState: Send + Sync {
@@ -279,10 +236,6 @@ pub trait JobState: Send + Sync {
 
     /// Delete a job from the global state
     async fn remove_job(&self, job_id: &str) -> Result<()>;
-
-    /// Get a stream of all `JobState` events. An event should be published any time that status
-    /// of a job changes in state
-    async fn job_state_events(&self) -> Result<JobStateEventStream>;
 
     /// Get the `SessionContext` associated with `session_id`. Returns an error if the
     /// session does not exist

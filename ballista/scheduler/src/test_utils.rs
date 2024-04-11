@@ -61,8 +61,6 @@ pub const TPCH_TABLES: &[&str] = &[
     "part", "supplier", "partsupp", "customer", "orders", "lineitem", "nation", "region",
 ];
 
-const TEST_SCHEDULER_NAME: &str = "localhost:50050";
-
 /// Sometimes we need to construct logical plans that will produce errors
 /// when we try and create physical plan. A scan using `ExplodingTableProvider`
 /// will do the trick
@@ -119,7 +117,7 @@ pub async fn await_condition<Fut: Future<Output = Result<bool>>, F: Fn() -> Fut>
 }
 
 pub fn test_cluster_context() -> BallistaCluster {
-    BallistaCluster::new_memory(TEST_SCHEDULER_NAME, default_session_builder)
+    BallistaCluster::new_memory(default_session_builder)
 }
 
 pub async fn datafusion_test_context(path: &str) -> Result<SessionContext> {

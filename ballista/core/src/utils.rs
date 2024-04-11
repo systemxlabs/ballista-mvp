@@ -113,9 +113,9 @@ pub fn create_grpc_server() -> Server {
         .timeout(Duration::from_secs(20))
         // Disable Nagle's Algorithm since we don't want packets to wait
         .tcp_nodelay(true)
-        .tcp_keepalive(Option::Some(Duration::from_secs(3600)))
-        .http2_keepalive_interval(Option::Some(Duration::from_secs(300)))
-        .http2_keepalive_timeout(Option::Some(Duration::from_secs(20)))
+        .tcp_keepalive(Some(Duration::from_secs(3600)))
+        .http2_keepalive_interval(Some(Duration::from_secs(300)))
+        .http2_keepalive_timeout(Some(Duration::from_secs(20)))
 }
 
 pub fn collect_plan_metrics(plan: &dyn ExecutionPlan) -> Vec<MetricsSet> {

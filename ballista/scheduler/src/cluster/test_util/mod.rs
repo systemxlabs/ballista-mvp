@@ -15,40 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::cluster::{JobState, JobStateEvent};
+use crate::cluster::JobState;
 use crate::scheduler_server::timestamp_millis;
 use crate::state::execution_graph::ExecutionGraph;
-use crate::test_utils::{await_condition, mock_completed_task, mock_executor};
+use crate::test_utils::{mock_completed_task, mock_executor};
 use ballista_core::error::Result;
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::JobStatus;
-use futures::StreamExt;
 use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::RwLock;
 
 pub struct JobStateTest<S: JobState> {
     state: Arc<S>,
-    events: Arc<RwLock<Vec<JobStateEvent>>>,
 }
 
 impl<S: JobState> JobStateTest<S> {
     pub async fn new(state: S) -> Result<Self> {
-        let events = Arc::new(RwLock::new(vec![]));
-
-        let mut event_stream = state.job_state_events().await?;
-        let events_clone = events.clone();
-        tokio::spawn(async move {
-            while let Some(event) = event_stream.next().await {
-                let mut guard = events_clone.write().await;
-
-                guard.push(event);
-            }
-        });
-
         Ok(Self {
             state: Arc::new(state),
-            events,
         })
     }
 
@@ -139,20 +122,6 @@ impl<S: JobState> JobStateTest<S> {
             "Expected success status but found {:?}",
             status
         );
-
-        Ok(self)
-    }
-
-    pub async fn assert_event(self, event: JobStateEvent) -> Result<Self> {
-        let events = self.events.clone();
-        let found = await_condition(Duration::from_millis(50), 10, || async {
-            let guard = events.read().await;
-
-            Ok(guard.iter().any(|ev| ev == &event))
-        })
-        .await?;
-
-        assert!(found, "Expected event {:?}", event);
 
         Ok(self)
     }

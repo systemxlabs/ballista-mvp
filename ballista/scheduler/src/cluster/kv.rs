@@ -18,7 +18,7 @@
 use crate::cluster::storage::{KeyValueStore, Keyspace, Lock, Operation, WatchEvent};
 use crate::cluster::{
     bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorHeartbeatStream,
-    ExecutorSlot, JobState, JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
+    ExecutorSlot, JobState, JobStatus, TaskDistributionPolicy,
 };
 use crate::scheduler_server::{timestamp_secs, SessionBuilder};
 use crate::state::execution_graph::ExecutionGraph;
@@ -42,7 +42,7 @@ use datafusion_proto::physical_plan::AsExecutionPlan;
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 use futures::StreamExt;
 use itertools::Itertools;
-use log::{info, warn};
+use log::info;
 use prost::Message;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -518,39 +518,6 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         } else {
             Ok(())
         }
-    }
-
-    async fn job_state_events(&self) -> Result<JobStateEventStream> {
-        let watch = self
-            .store
-            .watch(Keyspace::JobStatus, String::default())
-            .await?;
-
-        let stream = watch
-            .filter_map(|event| {
-                futures::future::ready(match event {
-                    WatchEvent::Put(key, value) => {
-                        if let Some(job_id) = Keyspace::JobStatus.strip_prefix(&key) {
-                            match JobStatus::decode(value.as_slice()) {
-                                Ok(status) => Some(JobStateEvent::JobUpdated {
-                                    job_id: job_id.to_string(),
-                                    status,
-                                }),
-                                Err(err) => {
-                                    warn!("Error decoding job status from watch event: {err:?}");
-                                    None
-                                }
-                            }
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
-                })
-            })
-            .boxed();
-
-        Ok(stream)
     }
 
     async fn get_session(&self, session_id: &str) -> Result<Arc<SessionContext>> {

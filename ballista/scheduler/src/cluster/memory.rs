@@ -17,7 +17,7 @@
 
 use crate::cluster::{
     bind_task_bias, bind_task_round_robin, BoundTask, ClusterState, ExecutorSlot, JobState,
-    JobStateEvent, JobStateEventStream, JobStatus, TaskDistributionPolicy,
+    JobStatus, TaskDistributionPolicy,
 };
 use crate::state::execution_graph::ExecutionGraph;
 use async_trait::async_trait;
@@ -30,7 +30,6 @@ use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use dashmap::DashMap;
 use datafusion::prelude::SessionContext;
 
-use crate::cluster::event::ClusterEventSender;
 use crate::scheduler_server::{timestamp_millis, timestamp_secs, SessionBuilder};
 use crate::state::session_manager::create_datafusion_context;
 use crate::state::task_manager::JobInfoCache;
@@ -185,7 +184,6 @@ impl ClusterState for InMemoryClusterState {
 /// Implementation of `JobState` which keeps all state in memory. If using `InMemoryJobState`
 /// no job state will be shared between schedulers
 pub struct InMemoryJobState {
-    scheduler: String,
     /// Jobs which have either completed successfully or failed
     completed_jobs: DashMap<String, (JobStatus, Option<ExecutionGraph>)>,
     /// In-memory store of queued jobs. Map from Job ID -> queued_at timestamp
@@ -196,36 +194,33 @@ pub struct InMemoryJobState {
     sessions: DashMap<String, Arc<SessionContext>>,
     /// `SessionBuilder` for building DataFusion `SessionContext` from `BallistaConfig`
     session_builder: SessionBuilder,
-    /// Sender of job events
-    job_event_sender: ClusterEventSender<JobStateEvent>,
 }
 
 impl InMemoryJobState {
-    pub fn new(scheduler: impl Into<String>, session_builder: SessionBuilder) -> Self {
+    pub fn new(session_builder: SessionBuilder) -> Self {
         Self {
-            scheduler: scheduler.into(),
             completed_jobs: Default::default(),
             queued_jobs: Default::default(),
             running_jobs: Default::default(),
             sessions: Default::default(),
             session_builder,
-            job_event_sender: ClusterEventSender::new(100),
         }
     }
 }
 
 #[async_trait]
 impl JobState for InMemoryJobState {
+    fn accept_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
+        self.queued_jobs.insert(job_id.to_string(), queued_at);
+
+        Ok(())
+    }
+
     async fn submit_job(&self, job_id: String, graph: &ExecutionGraph) -> Result<()> {
         if self.queued_jobs.get(&job_id).is_some() {
             self.running_jobs
                 .insert(job_id.clone(), graph.status().clone());
             self.queued_jobs.remove(&job_id);
-
-            self.job_event_sender.send(&JobStateEvent::JobAcquired {
-                job_id,
-                owner: self.scheduler.clone(),
-            });
 
             Ok(())
         } else {
@@ -233,6 +228,14 @@ impl JobState for InMemoryJobState {
                 "Failed to submit job {job_id}, not found in queued jobs"
             )))
         }
+    }
+
+    async fn get_jobs(&self) -> Result<HashSet<String>> {
+        Ok(self
+            .completed_jobs
+            .iter()
+            .map(|pair| pair.key().clone())
+            .collect())
     }
 
     async fn get_job_status(&self, job_id: &str) -> Result<Option<JobStatus>> {
@@ -277,51 +280,9 @@ impl JobState for InMemoryJobState {
             self.completed_jobs
                 .insert(job_id.to_string(), (status, Some(graph.clone())));
             self.running_jobs.remove(job_id);
-        } else if let Some(old_status) = self.running_jobs.insert(job_id.to_string(), status) {
-            self.job_event_sender.send(&JobStateEvent::JobUpdated {
-                job_id: job_id.to_string(),
-                status: old_status,
-            })
+        } else {
+            self.running_jobs.insert(job_id.to_string(), status);
         }
-
-        Ok(())
-    }
-
-    async fn get_session(&self, session_id: &str) -> Result<Arc<SessionContext>> {
-        self.sessions
-            .get(session_id)
-            .map(|sess| sess.clone())
-            .ok_or_else(|| BallistaError::General(format!("No session for {session_id} found")))
-    }
-
-    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
-        let session = create_datafusion_context(config, self.session_builder);
-        self.sessions.insert(session.session_id(), session.clone());
-
-        Ok(session)
-    }
-
-    async fn job_state_events(&self) -> Result<JobStateEventStream> {
-        Ok(Box::pin(self.job_event_sender.subscribe()))
-    }
-
-    async fn remove_job(&self, job_id: &str) -> Result<()> {
-        if self.completed_jobs.remove(job_id).is_none() {
-            warn!("Tried to delete non-existent job {job_id} from state");
-        }
-        Ok(())
-    }
-
-    async fn get_jobs(&self) -> Result<HashSet<String>> {
-        Ok(self
-            .completed_jobs
-            .iter()
-            .map(|pair| pair.key().clone())
-            .collect())
-    }
-
-    fn accept_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
-        self.queued_jobs.insert(job_id.to_string(), queued_at);
 
         Ok(())
     }
@@ -351,6 +312,27 @@ impl JobState for InMemoryJobState {
             )))
         }
     }
+
+    async fn remove_job(&self, job_id: &str) -> Result<()> {
+        if self.completed_jobs.remove(job_id).is_none() {
+            warn!("Tried to delete non-existent job {job_id} from state");
+        }
+        Ok(())
+    }
+
+    async fn get_session(&self, session_id: &str) -> Result<Arc<SessionContext>> {
+        self.sessions
+            .get(session_id)
+            .map(|sess| sess.clone())
+            .ok_or_else(|| BallistaError::General(format!("No session for {session_id} found")))
+    }
+
+    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
+        let session = create_datafusion_context(config, self.session_builder);
+        self.sessions.insert(session.session_id(), session.clone());
+
+        Ok(session)
+    }
 }
 
 #[cfg(test)]
@@ -364,17 +346,17 @@ mod test {
     #[tokio::test]
     async fn test_in_memory_job_lifecycle() -> Result<()> {
         test_job_lifecycle(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_aggregation_plan(4).await,
         )
         .await?;
         test_job_lifecycle(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_two_aggregations_plan(4).await,
         )
         .await?;
         test_job_lifecycle(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_join_plan(4).await,
         )
         .await?;
@@ -385,17 +367,17 @@ mod test {
     #[tokio::test]
     async fn test_in_memory_job_planning_failure() -> Result<()> {
         test_job_planning_failure(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_aggregation_plan(4).await,
         )
         .await?;
         test_job_planning_failure(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_two_aggregations_plan(4).await,
         )
         .await?;
         test_job_planning_failure(
-            InMemoryJobState::new("", default_session_builder),
+            InMemoryJobState::new(default_session_builder),
             test_join_plan(4).await,
         )
         .await?;
