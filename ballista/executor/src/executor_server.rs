@@ -403,7 +403,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
     }
 }
 
-/// Heartbeater will run forever until a shutdown notification received.
+/// Heartbeater will run forever.
 struct Heartbeater<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
     executor_server: Arc<ExecutorServer<T, U>>,
 }
@@ -428,7 +428,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> Heartbeater<T, U>
 /// There are two loop(future) running separately in tokio runtime.
 /// First is for sending back task status to scheduler
 /// Second is for receiving task from scheduler and run.
-/// The two loops will run forever until a shutdown notification received.
+/// The two loops will run forever.
 struct TaskRunnerPool<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
     executor_server: Arc<ExecutorServer<T, U>>,
 }
@@ -519,7 +519,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
             let dedicated_executor =
                 DedicatedExecutor::new("task_runner", executor_server.executor.concurrent_tasks);
 
-            // As long as the shutdown notification has not been received
             loop {
                 let maybe_task: Option<CuratorTaskDefinition> = rx_task.recv().await;
                 if let Some(curator_task) = maybe_task {
