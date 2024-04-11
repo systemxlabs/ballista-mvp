@@ -54,7 +54,6 @@ use crate::executor_server::TERMINATING;
 use crate::flight_service::BallistaFlightService;
 use crate::shutdown::Shutdown;
 use crate::shutdown::ShutdownNotifier;
-use crate::terminate;
 
 pub struct ExecutorProcessConfig {
     pub bind_host: String,
@@ -188,11 +187,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         },
         _ = signal::ctrl_c() => {
             let msg = "executor received ctrl-c event.".to_string();
-             info!("{:?}", msg);
-            (true, msg)
-        },
-        _ = terminate::sig_term() => {
-            let msg = "executor received terminate signal.".to_string();
              info!("{:?}", msg);
             (true, msg)
         },
