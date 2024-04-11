@@ -593,16 +593,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
         Ok(Response::new(Box::pin(stream)))
     }
 
-    /// Get a FlightDataStream containing the data related to the supported XDBC types.
-    async fn do_get_xdbc_type_info(
-        &self,
-        _query: CommandGetXdbcTypeInfo,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_xdbc_type_info");
-        Err(Status::unimplemented("Implement do_get_xdbc_type_info"))
-    }
-
     async fn get_flight_info_statement(
         &self,
         query: CommandStatementQuery,
@@ -616,6 +606,18 @@ impl FlightSqlService for FlightSqlServiceImpl {
 
         debug!("Returning flight info...");
         Ok(resp)
+    }
+
+    /// Get a FlightInfo for executing a substrait plan.
+    async fn get_flight_info_substrait_plan(
+        &self,
+        _query: CommandStatementSubstraitPlan,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<FlightInfo>, Status> {
+        debug!("get_flight_info_substrait_plan");
+        Err(Status::unimplemented(
+            "Implement get_flight_info_substrait_plan",
+        ))
     }
 
     async fn get_flight_info_prepared_statement(
@@ -833,6 +835,15 @@ impl FlightSqlService for FlightSqlServiceImpl {
         debug!("do_get_cross_reference");
         Err(Status::unimplemented("Implement do_get_cross_reference"))
     }
+    /// Get a FlightDataStream containing the data related to the supported XDBC types.
+    async fn do_get_xdbc_type_info(
+        &self,
+        _query: CommandGetXdbcTypeInfo,
+        _request: Request<Ticket>,
+    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
+        debug!("do_get_xdbc_type_info");
+        Err(Status::unimplemented("Implement do_get_xdbc_type_info"))
+    }
     // do_put
     async fn do_put_statement_update(
         &self,
@@ -852,6 +863,7 @@ impl FlightSqlService for FlightSqlServiceImpl {
             "Implement do_put_prepared_statement_query",
         ))
     }
+
     async fn do_put_prepared_statement_update(
         &self,
         handle: CommandPreparedStatementUpdate,
@@ -865,6 +877,16 @@ impl FlightSqlService for FlightSqlServiceImpl {
         let _ = self.execute_plan(ctx, &plan).await?;
         debug!("Sending -1 rows affected");
         Ok(-1)
+    }
+
+    /// Execute a substrait plan
+    async fn do_put_substrait_plan(
+        &self,
+        _query: CommandStatementSubstraitPlan,
+        _request: Request<PeekableFlightDataStream>,
+    ) -> Result<i64, Status> {
+        debug!("do_put_substrait_plan");
+        Err(Status::unimplemented("Implement do_put_substrait_plan"))
     }
 
     async fn do_action_create_prepared_statement(
@@ -900,28 +922,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
             .map_err(|e| Status::internal(format!("Failed to parse handle: {e:?}")))?;
 
         self.remove_plan(handle)
-    }
-
-    /// Get a FlightInfo for executing a substrait plan.
-    async fn get_flight_info_substrait_plan(
-        &self,
-        _query: CommandStatementSubstraitPlan,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_substrait_plan");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_substrait_plan",
-        ))
-    }
-
-    /// Execute a substrait plan
-    async fn do_put_substrait_plan(
-        &self,
-        _query: CommandStatementSubstraitPlan,
-        _request: Request<PeekableFlightDataStream>,
-    ) -> Result<i64, Status> {
-        debug!("do_put_substrait_plan");
-        Err(Status::unimplemented("Implement do_put_substrait_plan"))
     }
 
     /// Create a prepared substrait plan.

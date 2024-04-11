@@ -24,9 +24,9 @@ cargo install arrow_cli
 ```
 2. start scheduler & executor
 ```shell
-BIND_PORT=50050 cargo run --bin ballista-scheduler -r
-BIND_PORT=50051 BIND_GRPC_PORT=50052 cargo run --bin ballista-executor -r
-BIND_PORT=50061 BIND_GRPC_PORT=50062 cargo run --bin ballista-executor -r
+BIND_PORT=50050 RUST_LOG=ballista_scheduler=debug cargo run --bin ballista-scheduler -r
+BIND_PORT=50051 BIND_GRPC_PORT=50052 RUST_LOG=ballista_executor=debug cargo run --bin ballista-executor -r
+BIND_PORT=50061 BIND_GRPC_PORT=50062 RUST_LOG=ballista_executor=debug cargo run --bin ballista-executor -r
 ```
 3. execute query
 ```shell

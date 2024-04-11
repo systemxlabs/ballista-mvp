@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
             .unwrap_or("50050".to_string())
             .parse::<u16>()
             .unwrap(),
-        concurrent_tasks: 1, // defaults to all available cores
+        concurrent_tasks: 0, // 0 defaults to all available cores
         work_dir: None,
         grpc_server_max_decoding_message_size: 16777216, // 16MB
         grpc_server_max_encoding_message_size: 16777216, // 16MB

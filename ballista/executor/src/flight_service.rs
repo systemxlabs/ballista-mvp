@@ -67,13 +67,48 @@ type BoxedFlightStream<T> = Pin<Box<dyn Stream<Item = Result<T, Status>> + Send 
 
 #[tonic::async_trait]
 impl FlightService for BallistaFlightService {
-    type DoActionStream = BoxedFlightStream<arrow_flight::Result>;
-    type DoExchangeStream = BoxedFlightStream<FlightData>;
-    type DoGetStream = BoxedFlightStream<FlightData>;
-    type DoPutStream = BoxedFlightStream<PutResult>;
     type HandshakeStream = BoxedFlightStream<HandshakeResponse>;
-    type ListActionsStream = BoxedFlightStream<ActionType>;
+    async fn handshake(
+        &self,
+        _request: Request<Streaming<HandshakeRequest>>,
+    ) -> Result<Response<Self::HandshakeStream>, Status> {
+        let token = uuid::Uuid::new_v4();
+        info!("do_handshake token={}", token);
+
+        let result = HandshakeResponse {
+            protocol_version: 0,
+            payload: token.as_bytes().to_vec().into(),
+        };
+        let result = Ok(result);
+        let output = futures::stream::iter(vec![result]);
+        let str = format!("Bearer {token}");
+        let mut resp: Response<Pin<Box<dyn Stream<Item = Result<_, Status>> + Send + 'static>>> =
+            Response::new(Box::pin(output));
+        let md = MetadataValue::try_from(str)
+            .map_err(|_| Status::invalid_argument("authorization not parsable"))?;
+        resp.metadata_mut().insert("authorization", md);
+        Ok(resp)
+    }
     type ListFlightsStream = BoxedFlightStream<FlightInfo>;
+    async fn list_flights(
+        &self,
+        _request: Request<Criteria>,
+    ) -> Result<Response<Self::ListFlightsStream>, Status> {
+        Err(Status::unimplemented("list_flights"))
+    }
+    async fn get_flight_info(
+        &self,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<FlightInfo>, Status> {
+        Err(Status::unimplemented("get_flight_info"))
+    }
+    async fn get_schema(
+        &self,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<SchemaResult>, Status> {
+        Err(Status::unimplemented("get_schema"))
+    }
+    type DoGetStream = BoxedFlightStream<FlightData>;
 
     async fn do_get(
         &self,
@@ -119,48 +154,7 @@ impl FlightService for BallistaFlightService {
         }
     }
 
-    async fn get_schema(
-        &self,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<SchemaResult>, Status> {
-        Err(Status::unimplemented("get_schema"))
-    }
-
-    async fn get_flight_info(
-        &self,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        Err(Status::unimplemented("get_flight_info"))
-    }
-
-    async fn handshake(
-        &self,
-        _request: Request<Streaming<HandshakeRequest>>,
-    ) -> Result<Response<Self::HandshakeStream>, Status> {
-        let token = uuid::Uuid::new_v4();
-        info!("do_handshake token={}", token);
-
-        let result = HandshakeResponse {
-            protocol_version: 0,
-            payload: token.as_bytes().to_vec().into(),
-        };
-        let result = Ok(result);
-        let output = futures::stream::iter(vec![result]);
-        let str = format!("Bearer {token}");
-        let mut resp: Response<Pin<Box<dyn Stream<Item = Result<_, Status>> + Send + 'static>>> =
-            Response::new(Box::pin(output));
-        let md = MetadataValue::try_from(str)
-            .map_err(|_| Status::invalid_argument("authorization not parsable"))?;
-        resp.metadata_mut().insert("authorization", md);
-        Ok(resp)
-    }
-
-    async fn list_flights(
-        &self,
-        _request: Request<Criteria>,
-    ) -> Result<Response<Self::ListFlightsStream>, Status> {
-        Err(Status::unimplemented("list_flights"))
-    }
+    type DoPutStream = BoxedFlightStream<PutResult>;
 
     async fn do_put(
         &self,
@@ -175,6 +169,17 @@ impl FlightService for BallistaFlightService {
         Err(Status::unimplemented("do_put"))
     }
 
+    type DoExchangeStream = BoxedFlightStream<FlightData>;
+
+    async fn do_exchange(
+        &self,
+        _request: Request<Streaming<FlightData>>,
+    ) -> Result<Response<Self::DoExchangeStream>, Status> {
+        Err(Status::unimplemented("do_exchange"))
+    }
+
+    type DoActionStream = BoxedFlightStream<arrow_flight::Result>;
+
     async fn do_action(
         &self,
         request: Request<Action>,
@@ -186,18 +191,13 @@ impl FlightService for BallistaFlightService {
         Err(Status::unimplemented("do_action"))
     }
 
+    type ListActionsStream = BoxedFlightStream<ActionType>;
+
     async fn list_actions(
         &self,
         _request: Request<Empty>,
     ) -> Result<Response<Self::ListActionsStream>, Status> {
         Err(Status::unimplemented("list_actions"))
-    }
-
-    async fn do_exchange(
-        &self,
-        _request: Request<Streaming<FlightData>>,
-    ) -> Result<Response<Self::DoExchangeStream>, Status> {
-        Err(Status::unimplemented("do_exchange"))
     }
 }
 
