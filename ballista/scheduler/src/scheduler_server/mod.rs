@@ -195,15 +195,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
                         Some(stop_reason.clone()),
                         0,
                     );
-
-                    // If executor is not already terminating then stop it. If it is terminating then it should already be shutting
-                    // down and we do not need to do anything here.
-                    if !terminating {
-                        state
-                            .executor_manager
-                            .stop_executor(&executor_id, stop_reason)
-                            .await;
-                    }
                 }
                 tokio::time::sleep(Duration::from_secs(
                     state.config.expire_dead_executor_interval_seconds,

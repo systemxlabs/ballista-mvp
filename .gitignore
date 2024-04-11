@@ -88,6 +88,7 @@ Cargo.lock
 !ballista-cli/Cargo.lock
 
 rusty-tags.vi
+.arrow_history
 .history
 .flatbuffers/
 

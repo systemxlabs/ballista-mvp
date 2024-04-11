@@ -29,7 +29,6 @@ use futures::StreamExt;
 use log::{error, info};
 use tempfile::TempDir;
 use tokio::signal;
-use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
@@ -154,9 +153,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
     let mut service_handlers: FuturesUnordered<JoinHandle<Result<(), BallistaError>>> =
         FuturesUnordered::new();
 
-    // Channels used to receive stop requests from Executor grpc service.
-    let (stop_send, mut stop_recv) = mpsc::channel::<bool>(10);
-
     service_handlers.push(
         //If there is executor registration error during startup, return the error and stop early.
         executor_server::startup(
@@ -164,7 +160,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
             opt.clone(),
             executor.clone(),
             default_codec,
-            stop_send,
             &shutdown_noti,
         )
         .await?,
@@ -189,9 +184,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
             let msg = "executor received ctrl-c event.".to_string();
              info!("{:?}", msg);
             (true, msg)
-        },
-        _ = stop_recv.recv() => {
-            (false, "".to_string())
         },
     };
 

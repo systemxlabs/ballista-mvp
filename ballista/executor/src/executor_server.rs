@@ -36,7 +36,7 @@ use ballista_core::serde::protobuf::{
     scheduler_grpc_client::SchedulerGrpcClient,
     CancelTasksParams, CancelTasksResult, ExecutorStatus, HeartBeatParams, LaunchMultiTaskParams,
     LaunchMultiTaskResult, RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult,
-    StopExecutorParams, StopExecutorResult, TaskStatus, UpdateTaskStatusParams,
+    TaskStatus, UpdateTaskStatusParams,
 };
 use ballista_core::serde::scheduler::from_proto::get_task_definition_vec;
 use ballista_core::serde::scheduler::PartitionId;
@@ -80,7 +80,6 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
     config: Arc<ExecutorProcessConfig>,
     executor: Arc<Executor>,
     codec: BallistaCodec<T, U>,
-    stop_send: mpsc::Sender<bool>,
     shutdown_noti: &ShutdownNotifier,
 ) -> Result<ServerHandle, BallistaError> {
     let channel_buf_size = executor.concurrent_tasks * 50;
@@ -93,7 +92,6 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
         ExecutorEnv {
             tx_task,
             tx_task_status,
-            tx_stop: stop_send,
         },
         codec,
     );
@@ -189,8 +187,6 @@ struct ExecutorEnv {
     tx_task: mpsc::Sender<CuratorTaskDefinition>,
     /// Receive `TaskStatus` from CPU bound tasks pool `dedicated_executor` then use rpc send back to scheduler.
     tx_task_status: mpsc::Sender<CuratorTaskStatus>,
-    /// Receive stop executor request from rpc.
-    tx_stop: mpsc::Sender<bool>,
 }
 
 unsafe impl Sync for ExecutorEnv {}
@@ -623,29 +619,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorGrpc
             }
         }
         Ok(Response::new(LaunchMultiTaskResult { success: true }))
-    }
-
-    async fn stop_executor(
-        &self,
-        request: Request<StopExecutorParams>,
-    ) -> Result<Response<StopExecutorResult>, Status> {
-        let stop_request = request.into_inner();
-        if stop_request.executor_id != self.executor.metadata.id {
-            warn!(
-                "The executor id {} in request is different from {}. The stop request will be ignored",
-                stop_request.executor_id, self.executor.metadata.id
-            );
-            return Ok(Response::new(StopExecutorResult {}));
-        }
-        let stop_reason = stop_request.reason;
-        let force = stop_request.force;
-        info!(
-            "Receive stop executor request, reason: {:?}, force {:?}",
-            stop_reason, force
-        );
-        let stop_sender = self.executor_env.tx_stop.clone();
-        stop_sender.send(force).await.unwrap();
-        Ok(Response::new(StopExecutorResult {}))
     }
 
     async fn cancel_tasks(

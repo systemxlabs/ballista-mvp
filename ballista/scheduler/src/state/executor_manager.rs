@@ -29,7 +29,7 @@ use crate::state::task_manager::JobInfoCache;
 use ballista_core::serde::protobuf::executor_grpc_client::ExecutorGrpcClient;
 use ballista_core::serde::protobuf::{
     executor_status, CancelTasksParams, ExecutorHeartbeat, MultiTaskDefinition,
-    RemoveJobDataParams, StopExecutorParams,
+    RemoveJobDataParams,
 };
 use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use ballista_core::utils::{create_grpc_client_connection, get_time_before};
@@ -238,35 +238,6 @@ impl ExecutorManager {
     pub async fn remove_executor(&self, executor_id: &str, reason: Option<String>) -> Result<()> {
         info!("Removing executor {}: {:?}", executor_id, reason);
         self.cluster_state.remove_executor(executor_id).await
-    }
-
-    pub async fn stop_executor(&self, executor_id: &str, stop_reason: String) {
-        let executor_id = executor_id.to_string();
-        match self.get_client(&executor_id).await {
-            Ok(mut client) => {
-                tokio::task::spawn(async move {
-                    match client
-                        .stop_executor(StopExecutorParams {
-                            executor_id: executor_id.to_string(),
-                            reason: stop_reason,
-                            force: true,
-                        })
-                        .await
-                    {
-                        Err(error) => {
-                            warn!("Failed to send stop_executor rpc due to, {}", error);
-                        }
-                        Ok(_value) => {}
-                    }
-                });
-            }
-            Err(_) => {
-                warn!(
-                    "Executor is already dead, failed to connect to Executor {}",
-                    executor_id
-                );
-            }
-        }
     }
 
     pub async fn launch_multi_task(

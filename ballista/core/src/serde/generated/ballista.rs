@@ -703,21 +703,6 @@ pub struct HeartBeatParams {
 pub struct HeartBeatResult {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StopExecutorParams {
-    #[prost(string, tag = "1")]
-    pub executor_id: ::prost::alloc::string::String,
-    /// stop reason
-    #[prost(string, tag = "2")]
-    pub reason: ::prost::alloc::string::String,
-    /// force to stop the executor immediately
-    #[prost(bool, tag = "3")]
-    pub force: bool,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StopExecutorResult {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateTaskStatusParams {
     #[prost(string, tag = "1")]
     pub executor_id: ::prost::alloc::string::String,
@@ -1133,33 +1118,6 @@ pub mod executor_grpc_client {
                 );
             self.inner.unary(req, path, codec).await
         }
-        pub async fn stop_executor(
-            &mut self,
-            request: impl tonic::IntoRequest<super::StopExecutorParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::StopExecutorResult>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ballista.protobuf.ExecutorGrpc/StopExecutor",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("ballista.protobuf.ExecutorGrpc", "StopExecutor"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
         pub async fn cancel_tasks(
             &mut self,
             request: impl tonic::IntoRequest<super::CancelTasksParams>,
@@ -1520,13 +1478,6 @@ pub mod executor_grpc_server {
             tonic::Response<super::LaunchMultiTaskResult>,
             tonic::Status,
         >;
-        async fn stop_executor(
-            &self,
-            request: tonic::Request<super::StopExecutorParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::StopExecutorResult>,
-            tonic::Status,
-        >;
         async fn cancel_tasks(
             &self,
             request: tonic::Request<super::CancelTasksParams>,
@@ -1653,52 +1604,6 @@ pub mod executor_grpc_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = LaunchMultiTaskSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/ballista.protobuf.ExecutorGrpc/StopExecutor" => {
-                    #[allow(non_camel_case_types)]
-                    struct StopExecutorSvc<T: ExecutorGrpc>(pub Arc<T>);
-                    impl<
-                        T: ExecutorGrpc,
-                    > tonic::server::UnaryService<super::StopExecutorParams>
-                    for StopExecutorSvc<T> {
-                        type Response = super::StopExecutorResult;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::StopExecutorParams>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as ExecutorGrpc>::stop_executor(&inner, request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = StopExecutorSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
