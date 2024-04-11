@@ -883,10 +883,7 @@ impl ExecutionGraph {
         Ok(next_task)
     }
 
-    pub(crate) fn fetch_running_stage(
-        &mut self,
-        black_list: &[usize],
-    ) -> Option<(&mut RunningStage, &mut usize)> {
+    pub(crate) fn fetch_running_stage(&mut self) -> Option<(&mut RunningStage, &mut usize)> {
         if matches!(
             self.status,
             JobStatus {
@@ -898,7 +895,7 @@ impl ExecutionGraph {
             return None;
         }
 
-        let running_stage_id = self.get_running_stage_id(black_list);
+        let running_stage_id = self.get_running_stage_id();
         if let Some(running_stage_id) = running_stage_id {
             if let Some(ExecutionStage::Running(running_stage)) =
                 self.stages.get_mut(&running_stage_id)
@@ -913,11 +910,9 @@ impl ExecutionGraph {
         }
     }
 
-    fn get_running_stage_id(&mut self, black_list: &[usize]) -> Option<usize> {
+    fn get_running_stage_id(&mut self) -> Option<usize> {
         let mut running_stage_id = self.stages.iter().find_map(|(stage_id, stage)| {
-            if black_list.contains(stage_id) {
-                None
-            } else if let ExecutionStage::Running(stage) = stage {
+            if let ExecutionStage::Running(stage) = stage {
                 if stage.available_tasks() > 0 {
                     Some(*stage_id)
                 } else {
@@ -932,7 +927,7 @@ impl ExecutionGraph {
         // try to find a resolved stage and convert it to the running stage
         if running_stage_id.is_none() {
             if self.revive() {
-                running_stage_id = self.get_running_stage_id(black_list);
+                running_stage_id = self.get_running_stage_id();
             } else {
                 running_stage_id = None;
             }

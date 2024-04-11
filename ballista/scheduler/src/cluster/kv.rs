@@ -203,11 +203,9 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
                 .collect();
 
             let bound_tasks = match distribution {
-                TaskDistributionPolicy::Bias => {
-                    bind_task_bias(available_slots, active_jobs, |_| false).await
-                }
+                TaskDistributionPolicy::Bias => bind_task_bias(available_slots, active_jobs).await,
                 TaskDistributionPolicy::RoundRobin => {
-                    bind_task_round_robin(available_slots, active_jobs, |_| false).await
+                    bind_task_round_robin(available_slots, active_jobs).await
                 }
             };
 

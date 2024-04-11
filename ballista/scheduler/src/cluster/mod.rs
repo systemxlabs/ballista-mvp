@@ -19,7 +19,6 @@ use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
@@ -296,7 +295,6 @@ pub trait JobState: Send + Sync {
 pub(crate) async fn bind_task_bias(
     mut slots: Vec<&mut AvailableTaskSlots>,
     active_jobs: Arc<HashMap<String, JobInfoCache>>,
-    if_skip: fn(Arc<dyn ExecutionPlan>) -> bool,
 ) -> Vec<BoundTask> {
     let mut schedulable_tasks: Vec<BoundTask> = vec![];
 
@@ -321,16 +319,7 @@ pub(crate) async fn bind_task_bias(
         }
         let mut graph = job_info.execution_graph.write().await;
         let session_id = graph.session_id().to_string();
-        let mut black_list = vec![];
-        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage(&black_list) {
-            if if_skip(running_stage.plan.clone()) {
-                info!(
-                    "Will skip stage {}/{} for bias task binding",
-                    job_id, running_stage.stage_id
-                );
-                black_list.push(running_stage.stage_id);
-                continue;
-            }
+        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage() {
             // We are sure that it will at least bind one task by going through the following logic.
             // It will not go into a dead loop.
             let runnable_tasks = running_stage
@@ -381,7 +370,6 @@ pub(crate) async fn bind_task_bias(
 pub(crate) async fn bind_task_round_robin(
     mut slots: Vec<&mut AvailableTaskSlots>,
     active_jobs: Arc<HashMap<String, JobInfoCache>>,
-    if_skip: fn(Arc<dyn ExecutionPlan>) -> bool,
 ) -> Vec<BoundTask> {
     let mut schedulable_tasks: Vec<BoundTask> = vec![];
 
@@ -406,16 +394,7 @@ pub(crate) async fn bind_task_round_robin(
         }
         let mut graph = job_info.execution_graph.write().await;
         let session_id = graph.session_id().to_string();
-        let mut black_list = vec![];
-        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage(&black_list) {
-            if if_skip(running_stage.plan.clone()) {
-                info!(
-                    "Will skip stage {}/{} for round robin task binding",
-                    job_id, running_stage.stage_id
-                );
-                black_list.push(running_stage.stage_id);
-                continue;
-            }
+        while let Some((running_stage, task_id_gen)) = graph.fetch_running_stage() {
             // We are sure that it will at least bind one task by going through the following logic.
             // It will not go into a dead loop.
             let runnable_tasks = running_stage
@@ -492,8 +471,7 @@ mod test {
         let available_slots_ref: Vec<&mut AvailableTaskSlots> =
             available_slots.iter_mut().collect();
 
-        let bound_tasks =
-            bind_task_bias(available_slots_ref, Arc::new(active_jobs), |_| false).await;
+        let bound_tasks = bind_task_bias(available_slots_ref, Arc::new(active_jobs)).await;
         assert_eq!(9, bound_tasks.len());
 
         let result = get_result(bound_tasks);
@@ -545,8 +523,7 @@ mod test {
         let available_slots_ref: Vec<&mut AvailableTaskSlots> =
             available_slots.iter_mut().collect();
 
-        let bound_tasks =
-            bind_task_round_robin(available_slots_ref, Arc::new(active_jobs), |_| false).await;
+        let bound_tasks = bind_task_round_robin(available_slots_ref, Arc::new(active_jobs)).await;
         assert_eq!(9, bound_tasks.len());
 
         let result = get_result(bound_tasks);
