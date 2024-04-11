@@ -51,8 +51,6 @@ use crate::executor::{Executor, TasksDrainedFuture};
 use crate::executor_server;
 use crate::executor_server::TERMINATING;
 use crate::flight_service::BallistaFlightService;
-use crate::shutdown::Shutdown;
-use crate::shutdown::ShutdownNotifier;
 
 pub struct ExecutorProcessConfig {
     pub bind_host: String,
@@ -147,9 +145,6 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
 
     let default_codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> = BallistaCodec::default();
 
-    // Graceful shutdown notification
-    let shutdown_noti = ShutdownNotifier::new();
-
     let mut service_handlers: FuturesUnordered<JoinHandle<Result<(), BallistaError>>> =
         FuturesUnordered::new();
 
@@ -160,14 +155,10 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
             opt.clone(),
             executor.clone(),
             default_codec,
-            &shutdown_noti,
         )
         .await?,
     );
-    service_handlers.push(tokio::spawn(flight_server_run(
-        addr,
-        shutdown_noti.subscribe_for_shutdown(),
-    )));
+    service_handlers.push(tokio::spawn(flight_server_run(addr)));
 
     let tasks_drained = TasksDrainedFuture(executor);
 
@@ -220,33 +211,12 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         tasks_drained.await;
     }
 
-    // Extract the `shutdown_complete` receiver and transmitter
-    // explicitly drop `shutdown_transmitter`. This is important, as the
-    // `.await` below would otherwise never complete.
-    let ShutdownNotifier {
-        mut shutdown_complete_rx,
-        shutdown_complete_tx,
-        notify_shutdown,
-        ..
-    } = shutdown_noti;
-
-    // When `notify_shutdown` is dropped, all components which have `subscribe`d will
-    // receive the shutdown signal and can exit
-    drop(notify_shutdown);
-    // Drop final `Sender` so the `Receiver` below can complete
-    drop(shutdown_complete_tx);
-
-    // Wait for all related components to finish the shutdown processing.
-    let _ = shutdown_complete_rx.recv().await;
     info!("Executor stopped.");
     Ok(())
 }
 
 // Arrow flight service
-async fn flight_server_run(
-    addr: SocketAddr,
-    mut grpc_shutdown: Shutdown,
-) -> Result<(), BallistaError> {
+async fn flight_server_run(addr: SocketAddr) -> Result<(), BallistaError> {
     let service = BallistaFlightService::new();
     let server = FlightServiceServer::new(service);
     info!(
@@ -254,10 +224,7 @@ async fn flight_server_run(
         BALLISTA_VERSION, addr
     );
 
-    let shutdown_signal = grpc_shutdown.recv();
-    let server_future = create_grpc_server()
-        .add_service(server)
-        .serve_with_shutdown(addr, shutdown_signal);
+    let server_future = create_grpc_server().add_service(server).serve(addr);
 
     server_future.await.map_err(|e| {
         error!("Tonic error, Could not start Executor Flight Server.");

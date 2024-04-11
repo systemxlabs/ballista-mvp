@@ -33,7 +33,21 @@ BIND_PORT=50061 BIND_GRPC_PORT=50062 cargo run --bin ballista-executor -r
 arrow_cli --host localhost --port 50050 --user admin --password password
 > create external table lineitem stored as parquet location '<ProjectRoot>/testdata/small_lineitem';
 > select count(1) from lineitem;
++-----------------+
+| COUNT(Int64(1)) |
++-----------------+
+| 3000            |
++-----------------+
+
 > select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where  l_shipdate <= date '1998-09-02' group by  l_returnflag, l_linestatus order by   l_returnflag,  l_linestatus;
++--------------+--------------+---------+--------------------+--------------------+--------------------+--------------------+-------------------+----------------------+-------------+
+| l_returnflag | l_linestatus | sum_qty | sum_base_price     | sum_disc_price     | sum_charge         | avg_qty            | avg_price         | avg_disc             | count_order |
++--------------+--------------+---------+--------------------+--------------------+--------------------+--------------------+-------------------+----------------------+-------------+
+| A            | F            | 20828.0 | 31357732.729999997 | 29735191.103699997 | 30918848.08145099  | 26.132998745294856 | 39344.70856963613 | 0.050250941028858145 | 797         |
+| N            | F            | 558.0   | 814916.1599999999  | 781625.4935        | 811299.566748      | 26.571428571428573 | 38805.53142857143 | 0.04428571428571428  | 21          |
+| N            | O            | 33583.0 | 49965083.68        | 47421219.980399996 | 49328388.16726002  | 25.15580524344569  | 37427.02897378277 | 0.050119850187265884 | 1335        |
+| R            | F            | 20006.0 | 29919315.71000001  | 28383309.558999993 | 29550428.545111004 | 25.07017543859649  | 37492.87682957394 | 0.0504260651629072   | 798         |
++--------------+--------------+---------+--------------------+--------------------+--------------------+--------------------+-------------------+----------------------+-------------+
 ```
 
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow

@@ -55,7 +55,6 @@ use tokio::task::JoinHandle;
 use crate::cpu_bound_executor::DedicatedExecutor;
 use crate::executor::Executor;
 use crate::executor_process::ExecutorProcessConfig;
-use crate::shutdown::ShutdownNotifier;
 use crate::{as_task_status, TaskExecutionTimes};
 
 type ServerHandle = JoinHandle<Result<(), BallistaError>>;
@@ -80,7 +79,6 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
     config: Arc<ExecutorProcessConfig>,
     executor: Arc<Executor>,
     codec: BallistaCodec<T, U>,
-    shutdown_noti: &ShutdownNotifier,
 ) -> Result<ServerHandle, BallistaError> {
     let channel_buf_size = executor.concurrent_tasks * 50;
     let (tx_task, rx_task) = mpsc::channel::<CuratorTaskDefinition>(channel_buf_size);
@@ -109,12 +107,8 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
         let server = ExecutorGrpcServer::new(executor_server.clone())
             .max_encoding_message_size(config.grpc_server_max_encoding_message_size as usize)
             .max_decoding_message_size(config.grpc_server_max_decoding_message_size as usize);
-        let mut grpc_shutdown = shutdown_noti.subscribe_for_shutdown();
         tokio::spawn(async move {
-            let shutdown_signal = grpc_shutdown.recv();
-            let grpc_server_future = create_grpc_server()
-                .add_service(server)
-                .serve_with_shutdown(addr, shutdown_signal);
+            let grpc_server_future = create_grpc_server().add_service(server).serve(addr);
             grpc_server_future.await.map_err(|e| {
                 error!("Tonic error, Could not start Executor Grpc Server.");
                 BallistaError::TonicError(e)
@@ -140,13 +134,13 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
     // 3. Start Heartbeater loop
     {
         let heartbeater = Heartbeater::new(executor_server.clone());
-        heartbeater.start(shutdown_noti, config.executor_heartbeat_interval_seconds);
+        heartbeater.start(config.executor_heartbeat_interval_seconds);
     }
 
     // 4. Start TaskRunnerPool loop
     {
         let task_runner_pool = TaskRunnerPool::new(executor_server.clone());
-        task_runner_pool.start(rx_task, rx_task_status, shutdown_noti);
+        task_runner_pool.start(rx_task, rx_task_status);
     }
 
     Ok(server)
@@ -419,23 +413,13 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> Heartbeater<T, U>
         Self { executor_server }
     }
 
-    fn start(&self, shutdown_noti: &ShutdownNotifier, executor_heartbeat_interval_seconds: u64) {
+    fn start(&self, executor_heartbeat_interval_seconds: u64) {
         let executor_server = self.executor_server.clone();
-        let mut heartbeat_shutdown = shutdown_noti.subscribe_for_shutdown();
-        let heartbeat_complete = shutdown_noti.shutdown_complete_tx.clone();
         tokio::spawn(async move {
             info!("Starting heartbeater to send heartbeat the scheduler periodically");
-            // As long as the shutdown notification has not been received
-            while !heartbeat_shutdown.is_shutdown() {
+            loop {
                 executor_server.heartbeat().await;
-                tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_secs(executor_heartbeat_interval_seconds)) => {},
-                    _ = heartbeat_shutdown.recv() => {
-                        info!("Stop heartbeater");
-                        drop(heartbeat_complete);
-                        return;
-                    }
-                };
+                tokio::time::sleep(Duration::from_secs(executor_heartbeat_interval_seconds)).await;
             }
         });
     }
@@ -458,26 +442,15 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
         &self,
         mut rx_task: mpsc::Receiver<CuratorTaskDefinition>,
         mut rx_task_status: mpsc::Receiver<CuratorTaskStatus>,
-        shutdown_noti: &ShutdownNotifier,
     ) {
         //1. loop for task status reporting
         let executor_server = self.executor_server.clone();
-        let mut tasks_status_shutdown = shutdown_noti.subscribe_for_shutdown();
-        let tasks_status_complete = shutdown_noti.shutdown_complete_tx.clone();
         tokio::spawn(async move {
             info!("Starting the task status reporter");
-            // As long as the shutdown notification has not been received
-            while !tasks_status_shutdown.is_shutdown() {
+            loop {
                 let mut curator_task_status_map: HashMap<String, Vec<TaskStatus>> = HashMap::new();
                 // First try to fetch task status from the channel in *blocking* mode
-                let maybe_task_status: Option<CuratorTaskStatus> = tokio::select! {
-                     task_status = rx_task_status.recv() => task_status,
-                    _ = tasks_status_shutdown.recv() => {
-                        info!("Stop task status reporting loop");
-                        drop(tasks_status_complete);
-                        return;
-                    }
-                };
+                let maybe_task_status: Option<CuratorTaskStatus> = rx_task_status.recv().await;
 
                 let mut fetched_task_num = 0usize;
                 if let Some(task_status) = maybe_task_status {
@@ -488,7 +461,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                     fetched_task_num += 1;
                 } else {
                     info!("Channel is closed and will exit the task status report loop.");
-                    drop(tasks_status_complete);
                     return;
                 }
 
@@ -508,7 +480,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                         }
                         Err(TryRecvError::Disconnected) => {
                             info!("Channel is closed and will exit the task status report loop");
-                            drop(tasks_status_complete);
                             return;
                         }
                     }
@@ -540,8 +511,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
 
         //2. loop for task fetching and running
         let executor_server = self.executor_server.clone();
-        let mut task_runner_shutdown = shutdown_noti.subscribe_for_shutdown();
-        let task_runner_complete = shutdown_noti.shutdown_complete_tx.clone();
         tokio::spawn(async move {
             info!("Starting the task runner pool");
 
@@ -551,15 +520,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                 DedicatedExecutor::new("task_runner", executor_server.executor.concurrent_tasks);
 
             // As long as the shutdown notification has not been received
-            while !task_runner_shutdown.is_shutdown() {
-                let maybe_task: Option<CuratorTaskDefinition> = tokio::select! {
-                     task = rx_task.recv() => task,
-                    _ = task_runner_shutdown.recv() => {
-                        info!("Stop the task runner pool");
-                        drop(task_runner_complete);
-                        return;
-                    }
-                };
+            loop {
+                let maybe_task: Option<CuratorTaskDefinition> = rx_task.recv().await;
                 if let Some(curator_task) = maybe_task {
                     let task_identity = format!(
                         "TID {} {}/{}.{}/{}.{}",
@@ -578,7 +540,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                     });
                 } else {
                     info!("Channel is closed and will exit the task receive loop");
-                    drop(task_runner_complete);
                     return;
                 }
             }
