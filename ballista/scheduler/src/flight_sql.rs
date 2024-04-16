@@ -19,16 +19,9 @@ use arrow_flight::flight_descriptor::DescriptorType;
 use arrow_flight::flight_service_server::FlightService;
 use arrow_flight::sql::server::{FlightSqlService, PeekableFlightDataStream};
 use arrow_flight::sql::{
-    ActionBeginSavepointRequest, ActionBeginSavepointResult, ActionBeginTransactionRequest,
-    ActionBeginTransactionResult, ActionCancelQueryRequest, ActionCancelQueryResult,
     ActionClosePreparedStatementRequest, ActionCreatePreparedStatementRequest,
-    ActionCreatePreparedStatementResult, ActionCreatePreparedSubstraitPlanRequest,
-    ActionEndSavepointRequest, ActionEndTransactionRequest, CommandGetCatalogs,
-    CommandGetCrossReference, CommandGetDbSchemas, CommandGetExportedKeys, CommandGetImportedKeys,
-    CommandGetPrimaryKeys, CommandGetSqlInfo, CommandGetTableTypes, CommandGetTables,
-    CommandGetXdbcTypeInfo, CommandPreparedStatementQuery, CommandPreparedStatementUpdate,
-    CommandStatementQuery, CommandStatementSubstraitPlan, CommandStatementUpdate, SqlInfo,
-    TicketStatementQuery,
+    ActionCreatePreparedStatementResult, CommandGetSqlInfo, CommandGetTableTypes, CommandGetTables,
+    CommandPreparedStatementQuery, CommandPreparedStatementUpdate, CommandStatementQuery, SqlInfo,
 };
 use arrow_flight::{
     Action, FlightData, FlightDescriptor, FlightEndpoint, FlightInfo, HandshakeRequest,
@@ -608,18 +601,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
         Ok(resp)
     }
 
-    /// Get a FlightInfo for executing a substrait plan.
-    async fn get_flight_info_substrait_plan(
-        &self,
-        _query: CommandStatementSubstraitPlan,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_substrait_plan");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_substrait_plan",
-        ))
-    }
-
     async fn get_flight_info_prepared_statement(
         &self,
         handle: CommandPreparedStatementQuery,
@@ -634,23 +615,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
 
         debug!("Responding to query {}...", handle);
         Ok(resp)
-    }
-
-    async fn get_flight_info_catalogs(
-        &self,
-        _query: CommandGetCatalogs,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_catalogs");
-        Err(Status::unimplemented("Implement get_flight_info_catalogs"))
-    }
-    async fn get_flight_info_schemas(
-        &self,
-        _query: CommandGetDbSchemas,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_schemas");
-        Err(Status::unimplemented("Implement get_flight_info_schemas"))
     }
 
     async fn get_flight_info_tables(
@@ -688,181 +652,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
         // TODO: implement for FlightSQL JDBC to work
         Err(Status::unimplemented("Implement CommandGetSqlInfo"))
     }
-    async fn get_flight_info_primary_keys(
-        &self,
-        _query: CommandGetPrimaryKeys,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_primary_keys");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_primary_keys",
-        ))
-    }
-    async fn get_flight_info_exported_keys(
-        &self,
-        _query: CommandGetExportedKeys,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_exported_keys");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_exported_keys",
-        ))
-    }
-    async fn get_flight_info_imported_keys(
-        &self,
-        _query: CommandGetImportedKeys,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_imported_keys");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_imported_keys",
-        ))
-    }
-    async fn get_flight_info_cross_reference(
-        &self,
-        _query: CommandGetCrossReference,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_cross_reference");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_cross_reference",
-        ))
-    }
-
-    /// Get a FlightInfo to extract information about the supported XDBC types.
-    async fn get_flight_info_xdbc_type_info(
-        &self,
-        _query: CommandGetXdbcTypeInfo,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_xdbc_type_info");
-        Err(Status::unimplemented(
-            "Implement get_flight_info_xdbc_type_info",
-        ))
-    }
-
-    async fn do_get_statement(
-        &self,
-        _ticket: TicketStatementQuery,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_statement");
-        // let handle = Uuid::from_slice(&ticket.statement_handle)
-        //     .map_err(|e| Status::internal(format!("Error decoding ticket: {}", e)))?;
-        // let statements = self.statements.try_lock()
-        //     .map_err(|e| Status::internal(format!("Error decoding ticket: {}", e)))?;
-        // let plan = statements.get(&handle);
-        Err(Status::unimplemented("Implement do_get_statement"))
-    }
-
-    async fn do_get_prepared_statement(
-        &self,
-        _query: CommandPreparedStatementQuery,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_prepared_statement");
-        Err(Status::unimplemented("Implement do_get_prepared_statement"))
-    }
-    async fn do_get_catalogs(
-        &self,
-        _query: CommandGetCatalogs,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_catalogs");
-        Err(Status::unimplemented("Implement do_get_catalogs"))
-    }
-    async fn do_get_schemas(
-        &self,
-        _query: CommandGetDbSchemas,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_schemas");
-        Err(Status::unimplemented("Implement do_get_schemas"))
-    }
-    async fn do_get_tables(
-        &self,
-        _query: CommandGetTables,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_tables");
-        Err(Status::unimplemented("Implement do_get_tables"))
-    }
-    async fn do_get_table_types(
-        &self,
-        _query: CommandGetTableTypes,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_table_types");
-        Err(Status::unimplemented("Implement do_get_table_types"))
-    }
-    async fn do_get_sql_info(
-        &self,
-        _query: CommandGetSqlInfo,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_sql_info");
-        Err(Status::unimplemented("Implement do_get_sql_info"))
-    }
-    async fn do_get_primary_keys(
-        &self,
-        _query: CommandGetPrimaryKeys,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_primary_keys");
-        Err(Status::unimplemented("Implement do_get_primary_keys"))
-    }
-    async fn do_get_exported_keys(
-        &self,
-        _query: CommandGetExportedKeys,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_exported_keys");
-        Err(Status::unimplemented("Implement do_get_exported_keys"))
-    }
-    async fn do_get_imported_keys(
-        &self,
-        _query: CommandGetImportedKeys,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_imported_keys");
-        Err(Status::unimplemented("Implement do_get_imported_keys"))
-    }
-    async fn do_get_cross_reference(
-        &self,
-        _query: CommandGetCrossReference,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_cross_reference");
-        Err(Status::unimplemented("Implement do_get_cross_reference"))
-    }
-    /// Get a FlightDataStream containing the data related to the supported XDBC types.
-    async fn do_get_xdbc_type_info(
-        &self,
-        _query: CommandGetXdbcTypeInfo,
-        _request: Request<Ticket>,
-    ) -> Result<Response<<Self as FlightService>::DoGetStream>, Status> {
-        debug!("do_get_xdbc_type_info");
-        Err(Status::unimplemented("Implement do_get_xdbc_type_info"))
-    }
-    // do_put
-    async fn do_put_statement_update(
-        &self,
-        _ticket: CommandStatementUpdate,
-        _request: Request<PeekableFlightDataStream>,
-    ) -> Result<i64, Status> {
-        debug!("do_put_statement_update");
-        Err(Status::unimplemented("Implement do_put_statement_update"))
-    }
-    async fn do_put_prepared_statement_query(
-        &self,
-        _query: CommandPreparedStatementQuery,
-        _request: Request<PeekableFlightDataStream>,
-    ) -> Result<Response<<Self as FlightService>::DoPutStream>, Status> {
-        debug!("do_put_prepared_statement_query");
-        Err(Status::unimplemented(
-            "Implement do_put_prepared_statement_query",
-        ))
-    }
 
     async fn do_put_prepared_statement_update(
         &self,
@@ -877,16 +666,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
         let _ = self.execute_plan(ctx, &plan).await?;
         debug!("Sending -1 rows affected");
         Ok(-1)
-    }
-
-    /// Execute a substrait plan
-    async fn do_put_substrait_plan(
-        &self,
-        _query: CommandStatementSubstraitPlan,
-        _request: Request<PeekableFlightDataStream>,
-    ) -> Result<i64, Status> {
-        debug!("do_put_substrait_plan");
-        Err(Status::unimplemented("Implement do_put_substrait_plan"))
     }
 
     async fn do_action_create_prepared_statement(
@@ -922,70 +701,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
             .map_err(|e| Status::internal(format!("Failed to parse handle: {e:?}")))?;
 
         self.remove_plan(handle)
-    }
-
-    /// Create a prepared substrait plan.
-    async fn do_action_create_prepared_substrait_plan(
-        &self,
-        _query: ActionCreatePreparedSubstraitPlanRequest,
-        _request: Request<Action>,
-    ) -> Result<ActionCreatePreparedStatementResult, Status> {
-        debug!("do_action_create_prepared_substrait_plan");
-        Err(Status::unimplemented(
-            "Implement do_action_create_prepared_substrait_plan",
-        ))
-    }
-
-    /// Begin a transaction
-    async fn do_action_begin_transaction(
-        &self,
-        _query: ActionBeginTransactionRequest,
-        _request: Request<Action>,
-    ) -> Result<ActionBeginTransactionResult, Status> {
-        debug!("do_action_begin_transaction");
-        Err(Status::unimplemented(
-            "Implement do_action_begin_transaction",
-        ))
-    }
-
-    /// End a transaction
-    async fn do_action_end_transaction(
-        &self,
-        _query: ActionEndTransactionRequest,
-        _request: Request<Action>,
-    ) -> Result<(), Status> {
-        debug!("do_action_end_transaction");
-        Err(Status::unimplemented("Implement do_action_end_transaction"))
-    }
-
-    /// Begin a savepoint
-    async fn do_action_begin_savepoint(
-        &self,
-        _query: ActionBeginSavepointRequest,
-        _request: Request<Action>,
-    ) -> Result<ActionBeginSavepointResult, Status> {
-        debug!("do_action_begin_savepoint");
-        Err(Status::unimplemented("Implement do_action_begin_savepoint"))
-    }
-
-    /// End a savepoint
-    async fn do_action_end_savepoint(
-        &self,
-        _query: ActionEndSavepointRequest,
-        _request: Request<Action>,
-    ) -> Result<(), Status> {
-        debug!("do_action_end_savepoint");
-        Err(Status::unimplemented("Implement do_action_end_savepoint"))
-    }
-
-    /// Cancel a query
-    async fn do_action_cancel_query(
-        &self,
-        _query: ActionCancelQueryRequest,
-        _request: Request<Action>,
-    ) -> Result<ActionCancelQueryResult, Status> {
-        debug!("do_action_cancel_query");
-        Err(Status::unimplemented("Implement do_action_cancel_query"))
     }
 
     /// Register a new SqlInfo result, making it available when calling GetSqlInfo.
