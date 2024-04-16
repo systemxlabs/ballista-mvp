@@ -20,7 +20,7 @@ use arrow_flight::flight_service_server::FlightService;
 use arrow_flight::sql::server::{FlightSqlService, PeekableFlightDataStream};
 use arrow_flight::sql::{
     ActionClosePreparedStatementRequest, ActionCreatePreparedStatementRequest,
-    ActionCreatePreparedStatementResult, CommandGetSqlInfo, CommandGetTableTypes, CommandGetTables,
+    ActionCreatePreparedStatementResult, CommandGetTableTypes, CommandGetTables,
     CommandPreparedStatementQuery, CommandPreparedStatementUpdate, CommandStatementQuery, SqlInfo,
 };
 use arrow_flight::{
@@ -641,16 +641,6 @@ impl FlightSqlService for FlightSqlServiceImpl {
             .map_err(|e| Status::internal(format!("Error getting table types: {e}")))?;
         let resp = self.batch_to_schema_resp(&data, "get_flight_info_table_types")?;
         Ok(resp)
-    }
-
-    async fn get_flight_info_sql_info(
-        &self,
-        _query: CommandGetSqlInfo,
-        _request: Request<FlightDescriptor>,
-    ) -> Result<Response<FlightInfo>, Status> {
-        debug!("get_flight_info_sql_info");
-        // TODO: implement for FlightSQL JDBC to work
-        Err(Status::unimplemented("Implement CommandGetSqlInfo"))
     }
 
     async fn do_put_prepared_statement_update(
