@@ -255,10 +255,7 @@ impl AbortableReceiverStream {
 impl Stream for AbortableReceiverStream {
     type Item = result::Result<SendableRecordBatchStream, ArrowError>;
 
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.inner
             .poll_next_unpin(cx)
             .map_err(|e| ArrowError::ExternalError(Box::new(e)))

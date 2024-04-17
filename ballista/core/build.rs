@@ -28,10 +28,6 @@ fn main() -> Result<(), String> {
     let version = rustc_version::version().unwrap();
     println!("cargo:rustc-env=RUSTC_VERSION={version}");
 
-    // TODO: undo when resolved: https://github.com/intellij-rust/intellij-rust/issues/9402
-    #[cfg(feature = "docsrs")]
-    let path = out.join("ballista.rs");
-    #[cfg(not(feature = "docsrs"))]
     let path = "src/serde/generated/ballista.rs";
 
     // We don't include the proto files in releases so that downstreams
