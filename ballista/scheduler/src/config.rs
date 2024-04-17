@@ -69,7 +69,7 @@ impl Default for SchedulerConfig {
             finished_job_data_clean_up_interval_seconds: 300,
             finished_job_state_clean_up_interval_seconds: 3600,
             advertise_flight_sql_endpoint: None,
-            cluster_storage: ClusterStorageConfig::Memory,
+            cluster_storage: ClusterStorageConfig::Sled(None),
             job_resubmit_interval_ms: None,
             executor_termination_grace_period: 0,
             scheduler_event_expected_processing_duration: 0,
@@ -160,7 +160,6 @@ impl SchedulerConfig {
 
 #[derive(Clone, Debug)]
 pub enum ClusterStorageConfig {
-    Memory,
     Etcd(Vec<String>),
     Sled(Option<String>),
 }

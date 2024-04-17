@@ -35,7 +35,6 @@ use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::default_session_builder;
 
 use crate::cluster::kv::KeyValueState;
-use crate::cluster::memory::{InMemoryClusterState, InMemoryJobState};
 use crate::cluster::storage::etcd::EtcdClient;
 use crate::cluster::storage::sled::SledClient;
 use crate::cluster::storage::KeyValueStore;
@@ -45,7 +44,6 @@ use crate::state::execution_graph::{create_task_info, ExecutionGraph, TaskDescri
 use crate::state::task_manager::JobInfoCache;
 
 pub mod kv;
-pub mod memory;
 pub mod storage;
 
 #[cfg(test)]
@@ -63,13 +61,6 @@ impl BallistaCluster {
         Self {
             cluster_state,
             job_state,
-        }
-    }
-
-    pub fn new_memory(session_builder: SessionBuilder) -> Self {
-        Self {
-            cluster_state: Arc::new(InMemoryClusterState::default()),
-            job_state: Arc::new(InMemoryJobState::new(session_builder)),
         }
     }
 
@@ -127,9 +118,6 @@ impl BallistaCluster {
                         BallistaCodec::default(),
                     ))
                 }
-            }
-            ClusterStorageConfig::Memory => {
-                Ok(BallistaCluster::new_memory(default_session_builder))
             }
         }
     }

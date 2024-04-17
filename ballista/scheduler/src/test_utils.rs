@@ -52,6 +52,7 @@ use datafusion::test_util::scan_empty;
 use crate::cluster::BallistaCluster;
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 
+use crate::cluster::storage::sled::SledClient;
 use crate::state::execution_graph::{ExecutionGraph, TaskDescription};
 use ballista_core::utils::default_session_builder;
 use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
@@ -117,7 +118,13 @@ pub async fn await_condition<Fut: Future<Output = Result<bool>>, F: Fn() -> Fut>
 }
 
 pub fn test_cluster_context() -> BallistaCluster {
-    BallistaCluster::new_memory(default_session_builder)
+    let sled = SledClient::try_new_temporary().unwrap();
+    BallistaCluster::new_kv(
+        sled,
+        "test",
+        default_session_builder,
+        BallistaCodec::default(),
+    )
 }
 
 pub async fn datafusion_test_context(path: &str) -> Result<SessionContext> {

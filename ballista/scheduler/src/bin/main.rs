@@ -50,7 +50,6 @@ async fn main() -> Result<()> {
 
     let cluster_backend = env::var("CLUSTER_STORAGE").unwrap_or("sled".to_string());
     let cluster_storage_config = match cluster_backend.as_str() {
-        "memory" => ClusterStorageConfig::Memory,
         "etcd" => ClusterStorageConfig::Etcd(
             "localhost:2379"
                 .to_string()
