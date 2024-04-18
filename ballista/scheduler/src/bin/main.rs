@@ -69,7 +69,6 @@ async fn main() -> Result<()> {
         task_distribution: TaskDistributionPolicy::RoundRobin,
         finished_job_data_clean_up_interval_seconds: 300,
         finished_job_state_clean_up_interval_seconds: 3600,
-        advertise_flight_sql_endpoint: None,
         cluster_storage: cluster_storage_config,
         job_resubmit_interval_ms: None,        // not resubmit
         executor_termination_grace_period: 30, // seconds

@@ -236,24 +236,6 @@ impl FlightSqlServiceImpl {
                 ))?
             };
 
-            let (host, port) = match &self.server.state.config.advertise_flight_sql_endpoint {
-                Some(endpoint) => {
-                    let advertise_endpoint_vec: Vec<&str> = endpoint.split(':').collect();
-                    match advertise_endpoint_vec.as_slice() {
-                        [host_ip, port] => (
-                            String::from(*host_ip),
-                            FromStr::from_str(port)
-                                .expect("Failed to parse port from advertise-endpoint."),
-                        ),
-                        _ => Err(Status::internal(
-                            "advertise-endpoint flag has incorrect format. Expected IP:Port"
-                                .to_string(),
-                        ))?,
-                    }
-                }
-                None => (exec_host.clone(), exec_port),
-            };
-
             let fetch = if let Some(ref id) = loc.partition_id {
                 let fetch = protobuf::FetchPartition {
                     job_id: id.job_id.clone(),
@@ -277,7 +259,7 @@ impl FlightSqlServiceImpl {
             } else {
                 Err(Status::internal("Error getting stats".to_string()))?
             }
-            let authority = format!("{}:{}", &host, &port);
+            let authority = format!("{}:{}", &exec_host, &exec_port);
             let loc = Location {
                 uri: format!("grpc+tcp://{authority}"),
             };
