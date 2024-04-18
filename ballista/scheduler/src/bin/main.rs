@@ -70,9 +70,7 @@ async fn main() -> Result<()> {
         finished_job_data_clean_up_interval_seconds: 300,
         finished_job_state_clean_up_interval_seconds: 3600,
         cluster_storage: cluster_storage_config,
-        job_resubmit_interval_ms: None,        // not resubmit
         executor_termination_grace_period: 30, // seconds
-        scheduler_event_expected_processing_duration: 0, // disable
         grpc_server_max_decoding_message_size: 16777216, // 16MB
         grpc_server_max_encoding_message_size: 16777216, // 16MB
         executor_timeout_seconds: 180,

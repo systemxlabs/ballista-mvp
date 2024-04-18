@@ -36,16 +36,11 @@ pub struct SchedulerConfig {
     pub finished_job_data_clean_up_interval_seconds: u64,
     /// The delayed interval for cleaning up finished job state stored in the backend, 0 means the cleaning up is disabled.
     pub finished_job_state_clean_up_interval_seconds: u64,
-    /// If provided, submitted jobs which do not have tasks scheduled will be resubmitted after `job_resubmit_interval_ms`
-    /// milliseconds
-    pub job_resubmit_interval_ms: Option<u64>,
     /// Configuration for ballista cluster storage
     pub cluster_storage: ClusterStorageConfig,
     /// Time in seconds to allow executor for graceful shutdown. Once an executor signals it has entered Terminating status
     /// the scheduler should only consider the executor dead after this time interval has elapsed
     pub executor_termination_grace_period: u64,
-    /// The maximum expected processing time of a scheduler event (microseconds). Zero means disable.
-    pub scheduler_event_expected_processing_duration: u64,
     /// The maximum size of a decoded message at the grpc server side.
     pub grpc_server_max_decoding_message_size: u32,
     /// The maximum size of an encoded message at the grpc server side.
@@ -67,9 +62,7 @@ impl Default for SchedulerConfig {
             finished_job_data_clean_up_interval_seconds: 300,
             finished_job_state_clean_up_interval_seconds: 3600,
             cluster_storage: ClusterStorageConfig::Sled(None),
-            job_resubmit_interval_ms: None,
             executor_termination_grace_period: 0,
-            scheduler_event_expected_processing_duration: 0,
             grpc_server_max_decoding_message_size: 16777216,
             grpc_server_max_encoding_message_size: 16777216,
             executor_timeout_seconds: 180,
@@ -126,11 +119,6 @@ impl SchedulerConfig {
 
     pub fn with_cluster_storage(mut self, config: ClusterStorageConfig) -> Self {
         self.cluster_storage = config;
-        self
-    }
-
-    pub fn with_job_resubmit_interval_ms(mut self, interval_ms: u64) -> Self {
-        self.job_resubmit_interval_ms = Some(interval_ms);
         self
     }
 

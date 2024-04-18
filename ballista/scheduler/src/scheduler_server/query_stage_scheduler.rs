@@ -16,7 +16,6 @@
 // under the License.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use async_trait::async_trait;
 use log::{debug, error, info, warn};
@@ -29,7 +28,6 @@ use crate::scheduler_server::timestamp_millis;
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
 use tokio::sync::mpsc;
-use tokio::time::Instant;
 
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 
@@ -37,6 +35,7 @@ use crate::state::SchedulerState;
 
 pub(crate) struct QueryStageScheduler<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
     state: Arc<SchedulerState<T, U>>,
+    #[allow(dead_code)]
     config: Arc<SchedulerConfig>,
 }
 
@@ -64,10 +63,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
         tx_event: &mpsc::Sender<QueryStageSchedulerEvent>,
         _rx_event: &mpsc::Receiver<QueryStageSchedulerEvent>,
     ) -> Result<()> {
-        let mut time_recorder = None;
-        if self.config.scheduler_event_expected_processing_duration > 0 {
-            time_recorder = Some((Instant::now(), event.clone()));
-        };
         let event_sender = EventSender::new(tx_event.clone());
         match event {
             QueryStageSchedulerEvent::JobQueued {
@@ -265,18 +260,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
             }
             QueryStageSchedulerEvent::JobDataClean(job_id) => {
                 self.state.executor_manager.clean_up_job_data(job_id);
-            }
-        }
-        if let Some((start, ec)) = time_recorder {
-            let duration = start.elapsed();
-            if duration.ge(&Duration::from_micros(
-                self.config.scheduler_event_expected_processing_duration,
-            )) {
-                warn!(
-                    "[METRICS] {:?} event cost {:?} us!",
-                    ec,
-                    duration.as_micros()
-                );
             }
         }
         Ok(())
