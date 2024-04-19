@@ -328,7 +328,10 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
         } else {
             let value = self.store.get(Keyspace::Executors, executor_id).await?;
             if value.is_empty() {
-                return Err(BallistaError::Internal(format!("Executor {} not registered", executor_id)))
+                return Err(BallistaError::Internal(format!(
+                    "Executor {} not registered",
+                    executor_id
+                )));
             }
             let decoded = decode_into::<protobuf::ExecutorMetadata, ExecutorMetadata>(&value)?;
             self.executors
