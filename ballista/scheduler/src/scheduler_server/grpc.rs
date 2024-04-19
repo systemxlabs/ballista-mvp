@@ -180,9 +180,7 @@ mod test {
 
     use super::{SchedulerGrpc, SchedulerServer};
 
-    // TODO fixme
     #[tokio::test]
-    #[ignore]
     async fn test_register_executor_in_heartbeat_service() -> Result<(), BallistaError> {
         let cluster = test_cluster_context();
 
