@@ -50,8 +50,7 @@ use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use crate::scheduler_server::timestamp_millis;
 use crate::state::execution_graph::execution_stage::RunningStage;
 pub(crate) use crate::state::execution_graph::execution_stage::{
-    ExecutionStage, FailedStage, ResolvedStage, StageOutput, SuccessfulStage, TaskInfo,
-    UnresolvedStage,
+    ExecutionStage, ResolvedStage, StageOutput, SuccessfulStage, TaskInfo, UnresolvedStage,
 };
 use crate::state::task_manager::UpdatedStages;
 
@@ -936,10 +935,6 @@ impl ExecutionGraph {
         running_stage_id
     }
 
-    pub fn update_status(&mut self, status: JobStatus) {
-        self.status = status;
-    }
-
     pub fn output_locations(&self) -> Vec<PartitionLocation> {
         self.output_locations.clone()
     }
@@ -1126,22 +1121,6 @@ impl ExecutionGraph {
         }
     }
 
-    /// Convert running stage to be failed
-    pub fn fail_stage(&mut self, stage_id: usize, err_msg: String) -> bool {
-        if let Some(ExecutionStage::Running(stage)) = self.stages.remove(&stage_id) {
-            self.stages
-                .insert(stage_id, ExecutionStage::Failed(stage.to_failed(err_msg)));
-            true
-        } else {
-            info!(
-                "Fail to find a running stage {}/{} to fail",
-                self.job_id(),
-                stage_id
-            );
-            false
-        }
-    }
-
     /// Convert running stage to be unresolved,
     /// Returns a Vec of RunningTaskInfo for running tasks in this stage.
     pub fn rollback_running_stage(
@@ -1288,10 +1267,6 @@ impl ExecutionGraph {
                         SuccessfulStage::decode(stage, codec, session_ctx)?;
                     (stage.stage_id, ExecutionStage::Successful(stage))
                 }
-                StageType::FailedStage(stage) => {
-                    let stage: FailedStage = FailedStage::decode(stage, codec, session_ctx)?;
-                    (stage.stage_id, ExecutionStage::Failed(stage))
-                }
             };
 
             stages.insert(execution_stage.0, execution_stage.1);
@@ -1365,9 +1340,6 @@ impl ExecutionGraph {
                     ExecutionStage::Successful(stage) => StageType::SuccessfulStage(
                         SuccessfulStage::encode(job_id.clone(), stage, codec)?,
                     ),
-                    ExecutionStage::Failed(stage) => {
-                        StageType::FailedStage(FailedStage::encode(job_id.clone(), stage, codec)?)
-                    }
                 };
                 Ok(protobuf::ExecutionGraphStage {
                     stage_type: Some(stage_type),

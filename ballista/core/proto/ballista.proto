@@ -92,7 +92,6 @@ message ExecutionGraphStage {
     UnResolvedStage unresolved_stage = 1;
     ResolvedStage resolved_stage = 2;
     SuccessfulStage successful_stage = 3;
-    FailedStage failed_stage = 4;
   }
 }
 
@@ -123,17 +122,6 @@ message SuccessfulStage {
   bytes plan = 6;
   repeated TaskInfo task_infos = 7;
   repeated OperatorMetricsSet stage_metrics = 8;
-  uint32 stage_attempt_num = 9;
-}
-
-message FailedStage {
-  uint32 stage_id = 1;
-  uint32 partitions = 2;
-  repeated uint32 output_links = 4;
-  bytes plan = 5;
-  repeated TaskInfo task_infos = 6;
-  repeated OperatorMetricsSet stage_metrics = 7;
-  string error_message = 8;
   uint32 stage_attempt_num = 9;
 }
 

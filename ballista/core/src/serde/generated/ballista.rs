@@ -108,7 +108,7 @@ pub struct StageAttempts {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExecutionGraphStage {
-    #[prost(oneof = "execution_graph_stage::StageType", tags = "1, 2, 3, 4")]
+    #[prost(oneof = "execution_graph_stage::StageType", tags = "1, 2, 3")]
     pub stage_type: ::core::option::Option<execution_graph_stage::StageType>,
 }
 /// Nested message and enum types in `ExecutionGraphStage`.
@@ -122,8 +122,6 @@ pub mod execution_graph_stage {
         ResolvedStage(super::ResolvedStage),
         #[prost(message, tag = "3")]
         SuccessfulStage(super::SuccessfulStage),
-        #[prost(message, tag = "4")]
-        FailedStage(super::FailedStage),
     }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -181,26 +179,6 @@ pub struct SuccessfulStage {
     pub task_infos: ::prost::alloc::vec::Vec<TaskInfo>,
     #[prost(message, repeated, tag = "8")]
     pub stage_metrics: ::prost::alloc::vec::Vec<OperatorMetricsSet>,
-    #[prost(uint32, tag = "9")]
-    pub stage_attempt_num: u32,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FailedStage {
-    #[prost(uint32, tag = "1")]
-    pub stage_id: u32,
-    #[prost(uint32, tag = "2")]
-    pub partitions: u32,
-    #[prost(uint32, repeated, tag = "4")]
-    pub output_links: ::prost::alloc::vec::Vec<u32>,
-    #[prost(bytes = "vec", tag = "5")]
-    pub plan: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, repeated, tag = "6")]
-    pub task_infos: ::prost::alloc::vec::Vec<TaskInfo>,
-    #[prost(message, repeated, tag = "7")]
-    pub stage_metrics: ::prost::alloc::vec::Vec<OperatorMetricsSet>,
-    #[prost(string, tag = "8")]
-    pub error_message: ::prost::alloc::string::String,
     #[prost(uint32, tag = "9")]
     pub stage_attempt_num: u32,
 }

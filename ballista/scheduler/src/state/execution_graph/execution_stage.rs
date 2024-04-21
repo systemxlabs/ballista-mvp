@@ -61,7 +61,6 @@ pub(crate) enum ExecutionStage {
     Resolved(ResolvedStage),
     Running(RunningStage),
     Successful(SuccessfulStage),
-    Failed(FailedStage),
 }
 
 impl Debug for ExecutionStage {
@@ -71,7 +70,6 @@ impl Debug for ExecutionStage {
             ExecutionStage::Resolved(resolved_stage) => resolved_stage.fmt(f),
             ExecutionStage::Running(running_stage) => running_stage.fmt(f),
             ExecutionStage::Successful(successful_stage) => successful_stage.fmt(f),
-            ExecutionStage::Failed(failed_stage) => failed_stage.fmt(f),
         }
     }
 }
@@ -84,7 +82,6 @@ impl ExecutionStage {
             ExecutionStage::Resolved(_) => "Resolved",
             ExecutionStage::Running(_) => "Running",
             ExecutionStage::Successful(_) => "Successful",
-            ExecutionStage::Failed(_) => "Failed",
         }
     }
 }
@@ -183,30 +180,6 @@ pub(crate) struct SuccessfulStage {
     pub(crate) task_infos: Vec<TaskInfo>,
     /// Combined metrics of the already finished tasks in the stage.
     pub(crate) stage_metrics: Vec<MetricsSet>,
-}
-
-/// If a stage fails, it will be with an error message
-#[derive(Clone)]
-pub(crate) struct FailedStage {
-    /// Stage ID
-    pub(crate) stage_id: usize,
-    /// Stage Attempt number
-    pub(crate) stage_attempt_num: usize,
-    /// Total number of partitions for this stage.
-    /// This stage will produce on task for partition.
-    pub(crate) partitions: usize,
-    /// Stage ID of the stage that will take this stages outputs as inputs.
-    /// If `output_links` is empty then this the final stage in the `ExecutionGraph`
-    pub(crate) output_links: Vec<usize>,
-    /// `ExecutionPlan` for this stage
-    pub(crate) plan: Arc<dyn ExecutionPlan>,
-    /// TaskInfo of each already scheduled tasks. If info is None, the partition has not yet been scheduled
-    /// The index of the Vec is the task's partition id
-    pub(crate) task_infos: Vec<Option<TaskInfo>>,
-    /// Combined metrics of the already finished tasks in the stage, If it is None, no task is finished yet.
-    pub(crate) stage_metrics: Option<Vec<MetricsSet>>,
-    /// Error message
-    pub(crate) error_message: String,
 }
 
 #[derive(Clone)]
@@ -576,19 +549,6 @@ impl RunningStage {
             plan: self.plan.clone(),
             task_infos,
             stage_metrics,
-        }
-    }
-
-    pub(super) fn to_failed(&self, error_message: String) -> FailedStage {
-        FailedStage {
-            stage_id: self.stage_id,
-            stage_attempt_num: self.stage_attempt_num,
-            partitions: self.partitions,
-            output_links: self.output_links.clone(),
-            plan: self.plan.clone(),
-            task_infos: self.task_infos.clone(),
-            stage_metrics: self.stage_metrics.clone(),
-            error_message,
         }
     }
 
@@ -1013,133 +973,6 @@ impl Debug for SuccessfulStage {
             f,
             "=========SuccessfulStage[stage_id={}.{}, partitions={}]=========\n{}",
             self.stage_id, self.stage_attempt_num, self.partitions, plan
-        )
-    }
-}
-
-impl FailedStage {
-    /// Returns the number of successful tasks
-    pub(super) fn successful_tasks(&self) -> usize {
-        self.task_infos
-            .iter()
-            .filter(|info| {
-                matches!(
-                    info,
-                    Some(TaskInfo {
-                        task_status: task_status::Status::Successful(_),
-                        ..
-                    })
-                )
-            })
-            .count()
-    }
-    /// Returns the number of scheduled tasks
-    pub(super) fn scheduled_tasks(&self) -> usize {
-        self.task_infos.iter().filter(|s| s.is_some()).count()
-    }
-
-    /// Returns the number of tasks in this stage which are available for scheduling.
-    /// If the stage is not yet resolved, then this will return `0`, otherwise it will
-    /// return the number of tasks where the task status is not yet set.
-    pub(super) fn available_tasks(&self) -> usize {
-        self.task_infos.iter().filter(|s| s.is_none()).count()
-    }
-
-    pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
-        stage: protobuf::FailedStage,
-        codec: &BallistaCodec<T, U>,
-        session_ctx: &SessionContext,
-    ) -> Result<FailedStage> {
-        let plan_proto = U::try_decode(&stage.plan)?;
-        let plan = plan_proto.try_into_physical_plan(
-            session_ctx,
-            session_ctx.runtime_env().as_ref(),
-            codec.physical_extension_codec(),
-        )?;
-
-        let mut task_infos: Vec<Option<TaskInfo>> = vec![None; stage.partitions as usize];
-        for info in stage.task_infos {
-            task_infos[info.partition_id as usize] = Some(decode_taskinfo(info.clone()));
-        }
-
-        let stage_metrics = if stage.stage_metrics.is_empty() {
-            None
-        } else {
-            let ms = stage
-                .stage_metrics
-                .into_iter()
-                .map(|m| m.try_into())
-                .collect::<Result<Vec<_>>>()?;
-            Some(ms)
-        };
-
-        Ok(FailedStage {
-            stage_id: stage.stage_id as usize,
-            stage_attempt_num: stage.stage_attempt_num as usize,
-            partitions: stage.partitions as usize,
-            output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
-            plan,
-            task_infos,
-            stage_metrics,
-            error_message: stage.error_message,
-        })
-    }
-
-    pub(super) fn encode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
-        _job_id: String,
-        stage: FailedStage,
-        codec: &BallistaCodec<T, U>,
-    ) -> Result<protobuf::FailedStage> {
-        let stage_id = stage.stage_id;
-
-        let mut plan: Vec<u8> = vec![];
-        U::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
-            .and_then(|proto| proto.try_encode(&mut plan))?;
-
-        let task_infos: Vec<protobuf::TaskInfo> = stage
-            .task_infos
-            .into_iter()
-            .enumerate()
-            .filter_map(|(partition, task_info)| {
-                task_info.map(|info| encode_taskinfo(info, partition))
-            })
-            .collect();
-
-        let stage_metrics = stage
-            .stage_metrics
-            .unwrap_or_default()
-            .into_iter()
-            .map(|m| m.try_into())
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(protobuf::FailedStage {
-            stage_id: stage_id as u32,
-            stage_attempt_num: stage.stage_attempt_num as u32,
-            partitions: stage.partitions as u32,
-            output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
-            plan,
-            task_infos,
-            stage_metrics,
-            error_message: stage.error_message,
-        })
-    }
-}
-
-impl Debug for FailedStage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let plan = DisplayableExecutionPlan::new(self.plan.as_ref()).indent(false);
-
-        write!(
-            f,
-            "=========FailedStage[stage_id={}.{}, partitions={}, successful_tasks={}, scheduled_tasks={}, available_tasks={}, error_message={}]=========\n{}",
-            self.stage_id,
-            self.stage_attempt_num,
-            self.partitions,
-            self.successful_tasks(),
-            self.scheduled_tasks(),
-            self.available_tasks(),
-            self.error_message,
-            plan
         )
     }
 }
