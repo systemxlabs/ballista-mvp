@@ -230,12 +230,6 @@ impl ExecutionGraph {
             .all(|s| matches!(s, ExecutionStage::Successful(_)))
     }
 
-    pub fn is_complete(&self) -> bool {
-        self.stages
-            .values()
-            .all(|s| matches!(s, ExecutionStage::Successful(_)))
-    }
-
     /// Revive the execution graph by converting the resolved stages to running stages
     /// If any stages are converted, return true; else false.
     pub fn revive(&mut self) -> bool {
