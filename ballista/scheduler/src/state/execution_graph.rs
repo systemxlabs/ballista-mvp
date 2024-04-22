@@ -26,7 +26,7 @@ use datafusion::physical_plan::display::DisplayableExecutionPlan;
 use datafusion::physical_plan::{accept, ExecutionPlan, ExecutionPlanVisitor};
 use datafusion::prelude::SessionContext;
 use datafusion_proto::logical_plan::AsLogicalPlan;
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::execution_plans::{ShuffleWriterExec, UnresolvedShuffleExec};
@@ -150,6 +150,16 @@ impl ExecutionGraph {
         let output_partitions = plan.output_partitioning().partition_count();
 
         let shuffle_stages = planner.plan_query_stages(job_id, plan)?;
+        debug!(
+            "Planned shuffle stages: \n{}",
+            shuffle_stages
+                .iter()
+                .map(|stage| DisplayableExecutionPlan::new(stage.as_ref())
+                    .indent(true)
+                    .to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         let builder = ExecutionStageBuilder::new();
         let stages = builder.build(shuffle_stages)?;
