@@ -58,7 +58,6 @@ pub enum QueryStageSchedulerEvent {
     },
     JobUpdated(String),
     JobCancel(String),
-    JobDataClean(String),
     TaskUpdating(String, Vec<TaskStatus>),
     ReviveOffers,
     ExecutorLost(String, Option<String>),
@@ -111,9 +110,6 @@ impl Debug for QueryStageSchedulerEvent {
             }
             QueryStageSchedulerEvent::JobCancel(job_id) => {
                 write!(f, "JobCancel : job_id={job_id}.")
-            }
-            QueryStageSchedulerEvent::JobDataClean(job_id) => {
-                write!(f, "JobDataClean : job_id={job_id}.")
             }
             QueryStageSchedulerEvent::TaskUpdating(job_id, status) => {
                 write!(f, "TaskUpdating : job_id={job_id}, status:[{status:?}].")

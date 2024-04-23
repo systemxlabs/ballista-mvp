@@ -258,9 +258,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
                     warn!("Fail to cancel running tasks due to {:?}", e);
                 }
             }
-            QueryStageSchedulerEvent::JobDataClean(job_id) => {
-                self.state.executor_manager.clean_up_job_data(job_id);
-            }
         }
         Ok(())
     }
