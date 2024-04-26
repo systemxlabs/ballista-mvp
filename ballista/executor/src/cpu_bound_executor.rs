@@ -161,40 +161,6 @@ impl DedicatedExecutor {
 
         rx
     }
-
-    /// signals shutdown of this executor and any Clones
-    #[allow(dead_code)]
-    pub fn shutdown(&self) {
-        // hang up the channel which will cause the dedicated thread
-        // to quit
-        let mut state = self.state.lock();
-        // remaining job will still running
-        state.requests = None;
-    }
-
-    /// Stops all subsequent task executions, and waits for the worker
-    /// thread to complete. Note this will shutdown all clones of this
-    /// `DedicatedExecutor` as well.
-    ///
-    /// Only the first one to `join` will actually wait for the
-    /// executing thread to complete. All other calls to join will
-    /// complete immediately.
-    #[allow(dead_code)]
-    pub fn join(&self) {
-        self.shutdown();
-
-        // take the thread out when mutex is held
-        let thread = {
-            let mut state = self.state.lock();
-            state.thread.take()
-        };
-
-        // wait for completion while not holding the mutex to avoid
-        // deadlocks
-        if let Some(thread) = thread {
-            thread.join().ok();
-        }
-    }
 }
 
 #[cfg(unix)]
@@ -251,25 +217,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn multi_task() {
-        let barrier = Arc::new(Barrier::new(3));
-
-        // make an executor with two threads
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 2);
-        let dedicated_task1 = exec.spawn(do_work(11, Arc::clone(&barrier)));
-        let dedicated_task2 = exec.spawn(do_work(42, Arc::clone(&barrier)));
-
-        // block main thread until completion of other two tasks
-        barrier.wait();
-
-        // should be able to get the result
-        assert_eq!(dedicated_task1.await.unwrap(), 11);
-        assert_eq!(dedicated_task2.await.unwrap(), 42);
-
-        exec.join();
-    }
-
-    #[tokio::test]
     async fn worker_priority() {
         let exec = DedicatedExecutor::new("Test DedicatedExecutor", 2);
 
@@ -308,66 +255,6 @@ mod tests {
 
         // should not be able to get the result
         dedicated_task.await.unwrap_err();
-    }
-
-    #[tokio::test]
-    #[ignore]
-    // related https://github.com/apache/arrow-datafusion/issues/2140
-    async fn executor_shutdown_while_task_running() {
-        let barrier = Arc::new(Barrier::new(2));
-
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 1);
-        let dedicated_task = exec.spawn(do_work(42, Arc::clone(&barrier)));
-
-        exec.shutdown();
-        // block main thread until completion of the outstanding task
-        barrier.wait();
-
-        // task should complete successfully
-        assert_eq!(dedicated_task.await.unwrap(), 42);
-    }
-
-    #[tokio::test]
-    async fn executor_submit_task_after_shutdown() {
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 1);
-
-        // Simulate trying to submit tasks once executor has shutdown
-        exec.shutdown();
-        let dedicated_task = exec.spawn(async { 11 });
-
-        // task should complete, but return an error
-        dedicated_task.await.unwrap_err();
-    }
-
-    #[tokio::test]
-    async fn executor_submit_task_after_clone_shutdown() {
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 1);
-
-        // shutdown the clone (but not the exec)
-        exec.clone().join();
-
-        // Simulate trying to submit tasks once executor has shutdown
-        let dedicated_task = exec.spawn(async { 11 });
-
-        // task should complete, but return an error
-        dedicated_task.await.unwrap_err();
-    }
-
-    #[tokio::test]
-    async fn executor_join() {
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 1);
-        // test it doesn't hang
-        exec.join()
-    }
-
-    #[tokio::test]
-    #[allow(clippy::redundant_clone)]
-    async fn executor_clone_join() {
-        let exec = DedicatedExecutor::new("Test DedicatedExecutor", 1);
-        // test not hang
-        exec.clone().join();
-        exec.clone().join();
-        exec.join();
     }
 
     /// Wait for the barrier and then return `result`
