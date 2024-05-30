@@ -299,7 +299,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
         let task_id = task.task_id;
         let job_id = task.job_id;
         let stage_id = task.stage_id;
-        let stage_attempt_num = task.stage_attempt_num;
         let partition_id = task.partition_id;
         let plan = task.plan;
 
@@ -385,7 +384,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
             execution_result,
             executor_id.clone(),
             task_id,
-            stage_attempt_num,
             part,
             operator_metrics,
             task_execution_times,
@@ -523,13 +521,11 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
                 let maybe_task: Option<CuratorTaskDefinition> = rx_task.recv().await;
                 if let Some(curator_task) = maybe_task {
                     let task_identity = format!(
-                        "TID {} {}/{}.{}/{}.{}",
+                        "TID {} {}/{}/{}",
                         &curator_task.task.task_id,
                         &curator_task.task.job_id,
                         &curator_task.task.stage_id,
-                        &curator_task.task.stage_attempt_num,
                         &curator_task.task.partition_id,
-                        &curator_task.task.task_attempt_num,
                     );
                     info!("Received task {:?}", &task_identity);
 

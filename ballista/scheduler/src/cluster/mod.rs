@@ -292,9 +292,7 @@ pub(crate) async fn bind_task_bias(
                 let task_desc = TaskDescription {
                     session_id: session_id.clone(),
                     partition,
-                    stage_attempt_num: running_stage.stage_attempt_num,
                     task_id,
-                    task_attempt: running_stage.task_failure_numbers[partition_id],
                     data_cache: false,
                     plan: running_stage.plan.clone(),
                 };
@@ -369,9 +367,7 @@ pub(crate) async fn bind_task_round_robin(
                 let task_desc = TaskDescription {
                     session_id: session_id.clone(),
                     partition,
-                    stage_attempt_num: running_stage.stage_attempt_num,
                     task_id,
-                    task_attempt: running_stage.task_failure_numbers[partition_id],
                     data_cache: false,
                     plan: running_stage.plan.clone(),
                 };
@@ -555,7 +551,7 @@ mod test {
 
         if let Some(task) = graph.pop_next_task(&executor.id)? {
             let task_status = mock_completed_task(task, &executor.id);
-            graph.update_task_status(&executor, vec![task_status], 1, 1)?;
+            graph.update_task_status(&executor, vec![task_status])?;
         }
 
         graph.revive();
@@ -563,7 +559,7 @@ mod test {
         for _i in 0..num_partition - num_pending_task {
             if let Some(task) = graph.pop_next_task(&executor.id)? {
                 let task_status = mock_completed_task(task, &executor.id);
-                graph.update_task_status(&executor, vec![task_status], 1, 1)?;
+                graph.update_task_status(&executor, vec![task_status])?;
             }
         }
 

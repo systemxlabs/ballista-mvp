@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fmt::{Debug, Formatter};
-use std::iter::FromIterator;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -34,10 +33,8 @@ use log::{debug, warn};
 
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::execution_plans::ShuffleWriterExec;
-use ballista_core::serde::protobuf::failed_task::FailedReason;
 use ballista_core::serde::protobuf::{
-    self, task_info, FailedTask, GraphStageInput, OperatorMetricsSet, ResultLost, SuccessfulTask,
-    TaskStatus,
+    self, task_info, GraphStageInput, OperatorMetricsSet, TaskStatus,
 };
 use ballista_core::serde::protobuf::{task_status, RunningTask};
 use ballista_core::serde::scheduler::PartitionLocation;
@@ -91,8 +88,6 @@ impl ExecutionStage {
 pub(crate) struct UnresolvedStage {
     /// Stage ID
     pub(crate) stage_id: usize,
-    /// Stage Attempt number
-    pub(crate) stage_attempt_num: usize,
     /// Stage ID of the stage that will take this stages outputs as inputs.
     /// If `output_links` is empty then this the final stage in the `ExecutionGraph`
     pub(crate) output_links: Vec<usize>,
@@ -101,8 +96,6 @@ pub(crate) struct UnresolvedStage {
     pub(crate) inputs: HashMap<usize, StageOutput>,
     /// `ExecutionPlan` for this stage
     pub(crate) plan: Arc<dyn ExecutionPlan>,
-    /// Record last attempt's failure reasons to avoid duplicate resubmits
-    pub(crate) last_attempt_failure_reasons: HashSet<String>,
 }
 
 /// For a stage, if it has no inputs or all of its input stages are completed,
@@ -111,8 +104,6 @@ pub(crate) struct UnresolvedStage {
 pub(crate) struct ResolvedStage {
     /// Stage ID
     pub(crate) stage_id: usize,
-    /// Stage Attempt number
-    pub(crate) stage_attempt_num: usize,
     /// Total number of partitions for this stage.
     /// This stage will produce on task for partition.
     pub(crate) partitions: usize,
@@ -123,8 +114,6 @@ pub(crate) struct ResolvedStage {
     pub(crate) inputs: HashMap<usize, StageOutput>,
     /// `ExecutionPlan` for this stage
     pub(crate) plan: Arc<dyn ExecutionPlan>,
-    /// Record last attempt's failure reasons to avoid duplicate resubmits
-    pub(crate) last_attempt_failure_reasons: HashSet<String>,
 }
 
 /// Different from the resolved stage, a running stage will
@@ -136,8 +125,6 @@ pub(crate) struct ResolvedStage {
 pub(crate) struct RunningStage {
     /// Stage ID
     pub(crate) stage_id: usize,
-    /// Stage Attempt number
-    pub(crate) stage_attempt_num: usize,
     /// Total number of partitions for this stage.
     /// This stage will produce on task for partition.
     pub(crate) partitions: usize,
@@ -151,9 +138,6 @@ pub(crate) struct RunningStage {
     /// TaskInfo of each already scheduled task. If info is None, the partition has not yet been scheduled.
     /// The index of the Vec is the task's partition id
     pub(crate) task_infos: Vec<Option<TaskInfo>>,
-    /// Track the number of failures for each partition's task attempts.
-    /// The index of the Vec is the task's partition id.
-    pub(crate) task_failure_numbers: Vec<usize>,
     /// Combined metrics of the already finished tasks in the stage, If it is None, no task is finished yet.
     pub(crate) stage_metrics: Option<Vec<MetricsSet>>,
 }
@@ -163,8 +147,6 @@ pub(crate) struct RunningStage {
 pub(crate) struct SuccessfulStage {
     /// Stage ID
     pub(crate) stage_id: usize,
-    /// Stage Attempt number
-    pub(crate) stage_attempt_num: usize,
     /// Total number of partitions for this stage.
     /// This stage will produce on task for partition.
     pub(crate) partitions: usize,
@@ -214,29 +196,9 @@ impl UnresolvedStage {
 
         Self {
             stage_id,
-            stage_attempt_num: 0,
             output_links,
             inputs,
             plan,
-            last_attempt_failure_reasons: Default::default(),
-        }
-    }
-
-    pub(super) fn new_with_inputs(
-        stage_id: usize,
-        stage_attempt_num: usize,
-        plan: Arc<dyn ExecutionPlan>,
-        output_links: Vec<usize>,
-        inputs: HashMap<usize, StageOutput>,
-        last_attempt_failure_reasons: HashSet<String>,
-    ) -> Self {
-        Self {
-            stage_id,
-            stage_attempt_num,
-            output_links,
-            inputs,
-            plan,
-            last_attempt_failure_reasons,
         }
     }
 
@@ -258,38 +220,6 @@ impl UnresolvedStage {
         }
 
         Ok(())
-    }
-
-    /// Remove input partitions from an input stage on a given executor.
-    /// Return the HashSet of removed map partition ids
-    pub(super) fn remove_input_partitions(
-        &mut self,
-        input_stage_id: usize,
-        _input_partition_id: usize,
-        executor_id: &str,
-    ) -> Result<HashSet<usize>> {
-        if let Some(stage_output) = self.inputs.get_mut(&input_stage_id) {
-            let mut bad_map_partitions = HashSet::new();
-            stage_output
-                .partition_locations
-                .iter_mut()
-                .for_each(|(_partition, locs)| {
-                    locs.iter().for_each(|loc| {
-                        if loc.executor_meta.id == executor_id {
-                            bad_map_partitions.insert(loc.map_partition_id);
-                        }
-                    });
-
-                    locs.retain(|loc| loc.executor_meta.id != executor_id);
-                });
-            stage_output.complete = false;
-            Ok(bad_map_partitions)
-        } else {
-            Err(BallistaError::Internal(format!(
-                "Error remove input partition for Stage {}, {} is not a valid child stage ID",
-                self.stage_id, input_stage_id
-            )))
-        }
     }
 
     /// Marks the input stage ID as complete.
@@ -323,11 +253,9 @@ impl UnresolvedStage {
 
         Ok(ResolvedStage::new(
             self.stage_id,
-            self.stage_attempt_num,
             plan,
             self.output_links.clone(),
             self.inputs.clone(),
-            self.last_attempt_failure_reasons.clone(),
         ))
     }
 
@@ -347,11 +275,9 @@ impl UnresolvedStage {
 
         Ok(UnresolvedStage {
             stage_id: stage.stage_id as usize,
-            stage_attempt_num: stage.stage_attempt_num as usize,
             output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
             plan,
             inputs,
-            last_attempt_failure_reasons: HashSet::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 
@@ -367,11 +293,9 @@ impl UnresolvedStage {
 
         Ok(protobuf::UnResolvedStage {
             stage_id: stage.stage_id as u32,
-            stage_attempt_num: stage.stage_attempt_num as u32,
             output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: Vec::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 }
@@ -382,9 +306,8 @@ impl Debug for UnresolvedStage {
 
         write!(
             f,
-            "=========UnResolvedStage[stage_id={}.{}, children={}]=========\nInputs{:?}\n{}",
+            "=========UnResolvedStage[stage_id={}, children={}]=========\nInputs{:?}\n{}",
             self.stage_id,
-            self.stage_attempt_num,
             self.inputs.len(),
             self.inputs,
             plan
@@ -395,22 +318,18 @@ impl Debug for UnresolvedStage {
 impl ResolvedStage {
     pub(super) fn new(
         stage_id: usize,
-        stage_attempt_num: usize,
         plan: Arc<dyn ExecutionPlan>,
         output_links: Vec<usize>,
         inputs: HashMap<usize, StageOutput>,
-        last_attempt_failure_reasons: HashSet<String>,
     ) -> Self {
         let partitions = get_stage_partitions(plan.clone());
 
         Self {
             stage_id,
-            stage_attempt_num,
             partitions,
             output_links,
             inputs,
             plan,
-            last_attempt_failure_reasons,
         }
     }
 
@@ -418,27 +337,11 @@ impl ResolvedStage {
     pub(super) fn to_running(&self) -> RunningStage {
         RunningStage::new(
             self.stage_id,
-            self.stage_attempt_num,
             self.plan.clone(),
             self.partitions,
             self.output_links.clone(),
             self.inputs.clone(),
         )
-    }
-
-    /// Change to the unresolved state
-    pub(super) fn to_unresolved(&self) -> Result<UnresolvedStage> {
-        let new_plan = crate::planner::rollback_resolved_shuffles(self.plan.clone())?;
-
-        let unresolved = UnresolvedStage::new_with_inputs(
-            self.stage_id,
-            self.stage_attempt_num,
-            new_plan,
-            self.output_links.clone(),
-            self.inputs.clone(),
-            self.last_attempt_failure_reasons.clone(),
-        );
-        Ok(unresolved)
     }
 
     pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
@@ -457,12 +360,10 @@ impl ResolvedStage {
 
         Ok(ResolvedStage {
             stage_id: stage.stage_id as usize,
-            stage_attempt_num: stage.stage_attempt_num as usize,
             partitions: stage.partitions as usize,
             output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: HashSet::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 
@@ -478,12 +379,10 @@ impl ResolvedStage {
 
         Ok(protobuf::ResolvedStage {
             stage_id: stage.stage_id as u32,
-            stage_attempt_num: stage.stage_attempt_num as u32,
             partitions: stage.partitions as u32,
             output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
             inputs,
             plan,
-            last_attempt_failure_reasons: Vec::from_iter(stage.last_attempt_failure_reasons),
         })
     }
 }
@@ -494,8 +393,8 @@ impl Debug for ResolvedStage {
 
         write!(
             f,
-            "=========ResolvedStage[stage_id={}.{}, partitions={}]=========\n{}",
-            self.stage_id, self.stage_attempt_num, self.partitions, plan
+            "=========ResolvedStage[stage_id={}, partitions={}]=========\n{}",
+            self.stage_id, self.partitions, plan
         )
     }
 }
@@ -503,7 +402,6 @@ impl Debug for ResolvedStage {
 impl RunningStage {
     pub(super) fn new(
         stage_id: usize,
-        stage_attempt_num: usize,
         plan: Arc<dyn ExecutionPlan>,
         partitions: usize,
         output_links: Vec<usize>,
@@ -511,13 +409,11 @@ impl RunningStage {
     ) -> Self {
         Self {
             stage_id,
-            stage_attempt_num,
             partitions,
             output_links,
             inputs,
             plan,
             task_infos: vec![None; partitions],
-            task_failure_numbers: vec![0; partitions],
             stage_metrics: None,
         }
     }
@@ -530,8 +426,8 @@ impl RunningStage {
             .map(|(partition_id, info)| {
                 info.clone().unwrap_or_else(|| {
                     panic!(
-                        "TaskInfo for task {}.{}/{} should not be none",
-                        self.stage_id, self.stage_attempt_num, partition_id
+                        "TaskInfo for task {}/{} should not be none",
+                        self.stage_id, partition_id
                     )
                 })
             })
@@ -542,7 +438,6 @@ impl RunningStage {
         });
         SuccessfulStage {
             stage_id: self.stage_id,
-            stage_attempt_num: self.stage_attempt_num,
             partitions: self.partitions,
             output_links: self.output_links.clone(),
             inputs: self.inputs.clone(),
@@ -556,30 +451,10 @@ impl RunningStage {
     pub(super) fn to_resolved(&self) -> ResolvedStage {
         ResolvedStage::new(
             self.stage_id,
-            self.stage_attempt_num + 1,
             self.plan.clone(),
             self.output_links.clone(),
             self.inputs.clone(),
-            HashSet::new(),
         )
-    }
-
-    /// Change to the unresolved state and bump the stage attempt number
-    pub(super) fn to_unresolved(
-        &self,
-        failure_reasons: HashSet<String>,
-    ) -> Result<UnresolvedStage> {
-        let new_plan = crate::planner::rollback_resolved_shuffles(self.plan.clone())?;
-
-        let unresolved = UnresolvedStage::new_with_inputs(
-            self.stage_id,
-            self.stage_attempt_num + 1,
-            new_plan,
-            self.output_links.clone(),
-            self.inputs.clone(),
-            failure_reasons,
-        );
-        Ok(unresolved)
     }
 
     /// Returns `true` if all tasks for this stage are successful
@@ -665,14 +540,6 @@ impl RunningStage {
         };
         self.task_infos[partition_id] = Some(updated_task_info);
 
-        if let task_status::Status::Failed(failed_task) = task_status {
-            // if the failed task is retryable, increase the task failure count for this partition
-            if failed_task.retryable {
-                self.task_failure_numbers[partition_id] += 1;
-            }
-        } else {
-            self.task_failure_numbers[partition_id] = 0;
-        }
         true
     }
 
@@ -730,78 +597,6 @@ impl RunningStage {
         }
         first.aggregate_by_name()
     }
-
-    pub(super) fn task_failure_number(&self, partition_id: usize) -> usize {
-        self.task_failure_numbers[partition_id]
-    }
-
-    /// Reset the task info for the given task partition. This should be called when a task failed and need to be
-    /// re-scheduled.
-    pub fn reset_task_info(&mut self, partition_id: usize) {
-        self.task_infos[partition_id] = None;
-    }
-
-    /// Reset the running and completed tasks on a given executor
-    /// Returns the number of running tasks that were reset
-    pub fn reset_tasks(&mut self, executor: &str) -> usize {
-        let mut reset = 0;
-        for task in self.task_infos.iter_mut() {
-            match task {
-                Some(TaskInfo {
-                    task_status: task_status::Status::Running(RunningTask { executor_id }),
-                    ..
-                }) if *executor == *executor_id => {
-                    *task = None;
-                    reset += 1;
-                }
-                Some(TaskInfo {
-                    task_status:
-                        task_status::Status::Successful(SuccessfulTask {
-                            executor_id,
-                            partitions: _,
-                        }),
-                    ..
-                }) if *executor == *executor_id => {
-                    *task = None;
-                    reset += 1;
-                }
-                _ => {}
-            }
-        }
-        reset
-    }
-
-    /// Remove input partitions from an input stage on a given executor.
-    /// Return the HashSet of removed map partition ids
-    pub(super) fn remove_input_partitions(
-        &mut self,
-        input_stage_id: usize,
-        _input_partition_id: usize,
-        executor_id: &str,
-    ) -> Result<HashSet<usize>> {
-        if let Some(stage_output) = self.inputs.get_mut(&input_stage_id) {
-            let mut bad_map_partitions = HashSet::new();
-            stage_output
-                .partition_locations
-                .iter_mut()
-                .for_each(|(_partition, locs)| {
-                    locs.iter().for_each(|loc| {
-                        if loc.executor_meta.id == executor_id {
-                            bad_map_partitions.insert(loc.map_partition_id);
-                        }
-                    });
-
-                    locs.retain(|loc| loc.executor_meta.id != executor_id);
-                });
-            stage_output.complete = false;
-            Ok(bad_map_partitions)
-        } else {
-            Err(BallistaError::Internal(format!(
-                "Error remove input partition for Stage {}, {} is not a valid child stage ID",
-                self.stage_id, input_stage_id
-            )))
-        }
-    }
 }
 
 impl Debug for RunningStage {
@@ -810,9 +605,8 @@ impl Debug for RunningStage {
 
         write!(
             f,
-            "=========RunningStage[stage_id={}.{}, partitions={}, successful_tasks={}, scheduled_tasks={}, available_tasks={}]=========\n{}",
+            "=========RunningStage[stage_id={}, partitions={}, successful_tasks={}, scheduled_tasks={}, available_tasks={}]=========\n{}",
             self.stage_id,
-            self.stage_attempt_num,
             self.partitions,
             self.successful_tasks(),
             self.scheduled_tasks(),
@@ -823,72 +617,6 @@ impl Debug for RunningStage {
 }
 
 impl SuccessfulStage {
-    /// Change to the running state and bump the stage attempt number
-    pub fn to_running(&self) -> RunningStage {
-        let mut task_infos: Vec<Option<TaskInfo>> = Vec::new();
-        for task in self.task_infos.iter() {
-            match task {
-                TaskInfo {
-                    task_status: task_status::Status::Successful(_),
-                    ..
-                } => task_infos.push(Some(task.clone())),
-                _ => task_infos.push(None),
-            }
-        }
-        let stage_metrics = if self.stage_metrics.is_empty() {
-            None
-        } else {
-            Some(self.stage_metrics.clone())
-        };
-        RunningStage {
-            stage_id: self.stage_id,
-            stage_attempt_num: self.stage_attempt_num + 1,
-            partitions: self.partitions,
-            output_links: self.output_links.clone(),
-            inputs: self.inputs.clone(),
-            plan: self.plan.clone(),
-            task_infos,
-            // It is Ok to forget the previous task failure attempts
-            task_failure_numbers: vec![0; self.partitions],
-            stage_metrics,
-        }
-    }
-
-    /// Reset the successful tasks on a given executor
-    /// Returns the number of running tasks that were reset
-    pub fn reset_tasks(&mut self, executor: &str) -> usize {
-        let mut reset = 0;
-        let failure_reason = format!("Task failure due to Executor {executor} lost");
-        for task in self.task_infos.iter_mut() {
-            match task {
-                TaskInfo {
-                    task_id,
-                    scheduled_time,
-                    task_status: task_status::Status::Successful(SuccessfulTask { executor_id, .. }),
-                    ..
-                } if *executor == *executor_id => {
-                    *task = TaskInfo {
-                        task_id: *task_id,
-                        scheduled_time: *scheduled_time,
-                        launch_time: 0,
-                        start_exec_time: 0,
-                        end_exec_time: 0,
-                        finish_time: 0,
-                        task_status: task_status::Status::Failed(FailedTask {
-                            error: failure_reason.clone(),
-                            retryable: true,
-                            count_to_failures: false,
-                            failed_reason: Some(FailedReason::ResultLost(ResultLost {})),
-                        }),
-                    };
-                    reset += 1;
-                }
-                _ => {}
-            }
-        }
-        reset
-    }
-
     pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
         stage: protobuf::SuccessfulStage,
         codec: &BallistaCodec<T, U>,
@@ -916,7 +644,6 @@ impl SuccessfulStage {
 
         Ok(SuccessfulStage {
             stage_id: stage.stage_id as usize,
-            stage_attempt_num: stage.stage_attempt_num as usize,
             partitions: stage.partitions as usize,
             output_links: stage.output_links.into_iter().map(|l| l as usize).collect(),
             inputs,
@@ -953,7 +680,6 @@ impl SuccessfulStage {
 
         Ok(protobuf::SuccessfulStage {
             stage_id: stage_id as u32,
-            stage_attempt_num: stage.stage_attempt_num as u32,
             partitions: stage.partitions as u32,
             output_links: stage.output_links.into_iter().map(|l| l as u32).collect(),
             inputs,
@@ -971,8 +697,8 @@ impl Debug for SuccessfulStage {
 
         write!(
             f,
-            "=========SuccessfulStage[stage_id={}.{}, partitions={}]=========\n{}",
-            self.stage_id, self.stage_attempt_num, self.partitions, plan
+            "=========SuccessfulStage[stage_id={}, partitions={}]=========\n{}",
+            self.stage_id, self.partitions, plan
         )
     }
 }

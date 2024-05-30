@@ -88,22 +88,12 @@ pub struct ExecutionGraph {
     pub scheduler_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "8")]
     pub task_id_gen: u32,
-    #[prost(message, repeated, tag = "9")]
-    pub failed_attempts: ::prost::alloc::vec::Vec<StageAttempts>,
     #[prost(uint64, tag = "11")]
     pub start_time: u64,
     #[prost(uint64, tag = "12")]
     pub end_time: u64,
     #[prost(uint64, tag = "13")]
     pub queued_at: u64,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StageAttempts {
-    #[prost(uint32, tag = "1")]
-    pub stage_id: u32,
-    #[prost(uint32, repeated, tag = "2")]
-    pub stage_attempt_num: ::prost::alloc::vec::Vec<u32>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -135,12 +125,6 @@ pub struct UnResolvedStage {
     pub inputs: ::prost::alloc::vec::Vec<GraphStageInput>,
     #[prost(bytes = "vec", tag = "5")]
     pub plan: ::prost::alloc::vec::Vec<u8>,
-    #[prost(uint32, tag = "6")]
-    pub stage_attempt_num: u32,
-    #[prost(string, repeated, tag = "7")]
-    pub last_attempt_failure_reasons: ::prost::alloc::vec::Vec<
-        ::prost::alloc::string::String,
-    >,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -155,12 +139,6 @@ pub struct ResolvedStage {
     pub inputs: ::prost::alloc::vec::Vec<GraphStageInput>,
     #[prost(bytes = "vec", tag = "6")]
     pub plan: ::prost::alloc::vec::Vec<u8>,
-    #[prost(uint32, tag = "7")]
-    pub stage_attempt_num: u32,
-    #[prost(string, repeated, tag = "8")]
-    pub last_attempt_failure_reasons: ::prost::alloc::vec::Vec<
-        ::prost::alloc::string::String,
-    >,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -179,8 +157,6 @@ pub struct SuccessfulStage {
     pub task_infos: ::prost::alloc::vec::Vec<TaskInfo>,
     #[prost(message, repeated, tag = "8")]
     pub stage_metrics: ::prost::alloc::vec::Vec<OperatorMetricsSet>,
-    #[prost(uint32, tag = "9")]
-    pub stage_attempt_num: u32,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -313,8 +289,6 @@ pub struct PartitionId {
 pub struct TaskId {
     #[prost(uint32, tag = "1")]
     pub task_id: u32,
-    #[prost(uint32, tag = "2")]
-    pub task_attempt_num: u32,
     #[prost(uint32, tag = "3")]
     pub partition_id: u32,
 }
@@ -513,33 +487,6 @@ pub struct RunningTask {
 pub struct FailedTask {
     #[prost(string, tag = "1")]
     pub error: ::prost::alloc::string::String,
-    #[prost(bool, tag = "2")]
-    pub retryable: bool,
-    /// Whether this task failure should be counted to the maximum number of times the task is allowed to retry
-    #[prost(bool, tag = "3")]
-    pub count_to_failures: bool,
-    #[prost(oneof = "failed_task::FailedReason", tags = "4, 5, 6, 7, 8, 9")]
-    pub failed_reason: ::core::option::Option<failed_task::FailedReason>,
-}
-/// Nested message and enum types in `FailedTask`.
-pub mod failed_task {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum FailedReason {
-        #[prost(message, tag = "4")]
-        ExecutionError(super::ExecutionError),
-        #[prost(message, tag = "5")]
-        FetchPartitionError(super::FetchPartitionError),
-        #[prost(message, tag = "6")]
-        IoError(super::IoError),
-        #[prost(message, tag = "7")]
-        ExecutorLost(super::ExecutorLost),
-        /// A successful task's result is lost due to executor lost
-        #[prost(message, tag = "8")]
-        ResultLost(super::ResultLost),
-        #[prost(message, tag = "9")]
-        TaskKilled(super::TaskKilled),
-    }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -551,31 +498,6 @@ pub struct SuccessfulTask {
     #[prost(message, repeated, tag = "2")]
     pub partitions: ::prost::alloc::vec::Vec<ShuffleWritePartition>,
 }
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutionError {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FetchPartitionError {
-    #[prost(string, tag = "1")]
-    pub executor_id: ::prost::alloc::string::String,
-    #[prost(uint32, tag = "2")]
-    pub map_stage_id: u32,
-    #[prost(uint32, tag = "3")]
-    pub map_partition_id: u32,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct IoError {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ExecutorLost {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ResultLost {}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TaskKilled {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ShuffleWritePartition {
@@ -599,8 +521,6 @@ pub struct TaskStatus {
     pub job_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "3")]
     pub stage_id: u32,
-    #[prost(uint32, tag = "4")]
-    pub stage_attempt_num: u32,
     #[prost(uint32, tag = "5")]
     pub partition_id: u32,
     #[prost(uint64, tag = "6")]
@@ -637,8 +557,6 @@ pub struct MultiTaskDefinition {
     pub job_id: ::prost::alloc::string::String,
     #[prost(uint32, tag = "3")]
     pub stage_id: u32,
-    #[prost(uint32, tag = "4")]
-    pub stage_attempt_num: u32,
     #[prost(bytes = "vec", tag = "5")]
     pub plan: ::prost::alloc::vec::Vec<u8>,
     #[prost(string, tag = "7")]

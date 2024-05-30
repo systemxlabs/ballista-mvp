@@ -50,12 +50,6 @@ use tracing::trace;
 
 type ActiveJobCache = Arc<DashMap<String, JobInfoCache>>;
 
-// TODO move to configuration file
-/// Default max failure attempts for task level retry
-pub const TASK_MAX_FAILURES: usize = 4;
-/// Default max failure attempts for stage level retry
-pub const STAGE_MAX_FAILURES: usize = 4;
-
 #[async_trait::async_trait]
 pub trait TaskLauncher: Send + Sync + 'static {
     async fn launch_tasks(
@@ -142,8 +136,6 @@ pub struct UpdatedStages {
     pub resolved_stages: HashSet<usize>,
     pub successful_stages: HashSet<usize>,
     pub failed_stages: HashMap<usize, String>,
-    pub rollback_running_stages: HashMap<usize, HashSet<String>>,
-    pub resubmit_successful_stages: HashSet<usize>,
 }
 
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U> {
@@ -289,12 +281,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
             // let graph = self.get_active_execution_graph(&job_id).await;
             let job_events = if let Some(cached) = self.get_active_execution_graph(&job_id) {
                 let mut graph = cached.write().await;
-                graph.update_task_status(
-                    executor,
-                    statuses,
-                    TASK_MAX_FAILURES,
-                    STAGE_MAX_FAILURES,
-                )?
+                graph.update_task_status(executor, statuses)?
             } else {
                 // TODO Deal with curator changed case
                 error!("Fail to find job {} in the active cache and it may not be curated by this scheduler", job_id);
@@ -400,24 +387,8 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
     }
 
     /// return a Vec of running tasks need to cancel
-    pub async fn executor_lost(&self, executor_id: &str) -> Result<Vec<RunningTaskInfo>> {
-        // Collect all the running task need to cancel when there are running stages rolled back.
-        let mut running_tasks_to_cancel: Vec<RunningTaskInfo> = vec![];
-        // Collect graphs we update so we can update them in storage
-        let updated_graphs: DashMap<String, ExecutionGraph> = DashMap::new();
-        {
-            for pairs in self.active_job_cache.iter() {
-                let (job_id, job_info) = pairs.pair();
-                let mut graph = job_info.execution_graph.write().await;
-                let reset = graph.reset_stages_on_lost_executor(executor_id)?;
-                if !reset.0.is_empty() {
-                    updated_graphs.insert(job_id.to_owned(), graph.clone());
-                    running_tasks_to_cancel.extend(reset.1);
-                }
-            }
-        }
-
-        Ok(running_tasks_to_cancel)
+    pub async fn executor_lost(&self, _executor_id: &str) -> Result<Vec<RunningTaskInfo>> {
+        Ok(vec![])
     }
 
     /// Retrieve the number of available tasks for the given job. The value returned
@@ -466,7 +437,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
             let session_id = task.session_id.clone();
             let job_id = task.partition.job_id.clone();
             let stage_id = task.partition.stage_id;
-            let stage_attempt_num = task.stage_attempt_num;
 
             if log::max_level() >= log::Level::Debug {
                 let task_ids: Vec<usize> = tasks
@@ -512,7 +482,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                         .into_iter()
                         .map(|task| TaskId {
                             task_id: task.task_id as u32,
-                            task_attempt_num: task.task_attempt as u32,
                             partition_id: task.partition.partition_id as u32,
                         })
                         .collect();
@@ -520,7 +489,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                         task_ids,
                         job_id: job_id.clone(),
                         stage_id: stage_id as u32,
-                        stage_attempt_num: stage_attempt_num as u32,
                         plan: plan.clone(),
                         session_id: session_id.clone(),
                         launch_time,
@@ -532,7 +500,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                         .into_iter()
                         .map(|task| TaskId {
                             task_id: task.task_id as u32,
-                            task_attempt_num: task.task_attempt as u32,
                             partition_id: task.partition.partition_id as u32,
                         })
                         .collect();
@@ -540,7 +507,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                         task_ids,
                         job_id,
                         stage_id: stage_id as u32,
-                        stage_attempt_num: stage_attempt_num as u32,
                         plan,
                         session_id,
                         launch_time,

@@ -281,8 +281,8 @@ mod test {
     use crate::config::SchedulerConfig;
 
     use ballista_core::serde::protobuf::{
-        failed_task, job_status, task_status, ExecutionError, FailedTask, JobStatus,
-        MultiTaskDefinition, SuccessfulJob, TaskId, TaskStatus,
+        job_status, task_status, FailedTask, JobStatus, MultiTaskDefinition, SuccessfulJob, TaskId,
+        TaskStatus,
     };
 
     use crate::scheduler_server::timestamp_millis;
@@ -331,7 +331,6 @@ mod test {
                         task_id,
                         job_id: task.job_id.clone(),
                         stage_id: task.stage_id,
-                        stage_attempt_num: task.stage_attempt_num,
                         partition_id,
                         launch_time: timestamp,
                         start_exec_time: timestamp,
@@ -339,11 +338,6 @@ mod test {
                         metrics: vec![],
                         status: Some(task_status::Status::Failed(FailedTask {
                             error: "ERROR".to_string(),
-                            retryable: false,
-                            count_to_failures: false,
-                            failed_reason: Some(failed_task::FailedReason::ExecutionError(
-                                ExecutionError {},
-                            )),
                         })),
                     });
                 }

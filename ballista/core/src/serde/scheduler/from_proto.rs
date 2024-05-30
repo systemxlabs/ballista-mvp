@@ -264,7 +264,6 @@ pub fn get_task_definition_vec<T: 'static + AsLogicalPlan, U: 'static + AsExecut
 
     let job_id = multi_task.job_id;
     let stage_id = multi_task.stage_id as usize;
-    let stage_attempt_num = multi_task.stage_attempt_num as usize;
     let launch_time = multi_task.launch_time;
     let task_ids = multi_task.task_ids;
     let session_id = multi_task.session_id;
@@ -274,10 +273,8 @@ pub fn get_task_definition_vec<T: 'static + AsLogicalPlan, U: 'static + AsExecut
         .map(|task_id| {
             Ok(TaskDefinition {
                 task_id: task_id.task_id as usize,
-                task_attempt_num: task_id.task_attempt_num as usize,
                 job_id: job_id.clone(),
                 stage_id,
-                stage_attempt_num,
                 partition_id: task_id.partition_id as usize,
                 plan: reset_metrics_for_execution_plan(plan.clone())?,
                 launch_time,

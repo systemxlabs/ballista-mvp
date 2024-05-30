@@ -76,15 +76,9 @@ message ExecutionGraph {
   repeated PartitionLocation output_locations = 6;
   string scheduler_id = 7;
   uint32 task_id_gen = 8;
-  repeated StageAttempts failed_attempts = 9;
   uint64 start_time = 11;
   uint64 end_time = 12;
   uint64 queued_at = 13;
-}
-
-message StageAttempts {
-  uint32 stage_id = 1;
-  repeated uint32 stage_attempt_num = 2;
 }
 
 message ExecutionGraphStage {
@@ -100,8 +94,6 @@ message UnResolvedStage {
   repeated uint32 output_links = 3;
   repeated  GraphStageInput inputs = 4;
   bytes plan = 5;
-  uint32 stage_attempt_num = 6;
-  repeated string last_attempt_failure_reasons = 7;
 }
 
 message ResolvedStage {
@@ -110,8 +102,6 @@ message ResolvedStage {
   repeated uint32 output_links = 4;
   repeated  GraphStageInput inputs = 5;
   bytes plan = 6;
-  uint32 stage_attempt_num = 7;
-  repeated string last_attempt_failure_reasons = 8;
 }
 
 message SuccessfulStage {
@@ -122,7 +112,6 @@ message SuccessfulStage {
   bytes plan = 6;
   repeated TaskInfo task_infos = 7;
   repeated OperatorMetricsSet stage_metrics = 8;
-  uint32 stage_attempt_num = 9;
 }
 
 message TaskInfo {
@@ -200,7 +189,6 @@ message PartitionId {
 
 message TaskId {
   uint32 task_id = 1;
-  uint32 task_attempt_num = 2;
   uint32 partition_id = 3;
 }
 
@@ -313,18 +301,6 @@ message RunningTask {
 
 message FailedTask {
   string error = 1;
-  bool retryable = 2;
-  // Whether this task failure should be counted to the maximum number of times the task is allowed to retry
-  bool count_to_failures = 3;
-  oneof failed_reason {
-    ExecutionError execution_error = 4;
-    FetchPartitionError fetch_partition_error = 5;
-    IOError io_error = 6;
-    ExecutorLost executor_lost = 7;
-    // A successful task's result is lost due to executor lost
-    ResultLost result_lost = 8;
-    TaskKilled task_killed = 9;
-  }
 }
 
 message SuccessfulTask {
@@ -332,27 +308,6 @@ message SuccessfulTask {
   // TODO tasks are currently always shuffle writes but this will not always be the case
   // so we might want to think about some refactoring of the task definitions
   repeated ShuffleWritePartition partitions = 2;
-}
-
-message ExecutionError {
-}
-
-message FetchPartitionError {
-  string executor_id = 1;
-  uint32 map_stage_id = 2;
-  uint32 map_partition_id = 3;
-}
-
-message IOError {
-}
-
-message ExecutorLost {
-}
-
-message ResultLost {
-}
-
-message TaskKilled {
 }
 
 message ShuffleWritePartition {
@@ -367,7 +322,6 @@ message TaskStatus {
   uint32 task_id = 1;
   string job_id = 2;
   uint32 stage_id = 3;
-  uint32 stage_attempt_num = 4;
   uint32 partition_id = 5;
   uint64 launch_time = 6;
   uint64 start_exec_time = 7;
@@ -385,7 +339,6 @@ message MultiTaskDefinition {
   repeated TaskId task_ids = 1;
   string job_id = 2;
   uint32 stage_id = 3;
-  uint32 stage_attempt_num = 4;
   bytes plan = 5;
   string session_id = 7;
   uint64 launch_time = 8;

@@ -197,10 +197,8 @@ impl PartitionStats {
 #[derive(Clone, Debug)]
 pub struct TaskDefinition {
     pub task_id: usize,
-    pub task_attempt_num: usize,
     pub job_id: String,
     pub stage_id: usize,
-    pub stage_attempt_num: usize,
     pub partition_id: usize,
     pub plan: Arc<dyn ExecutionPlan>,
     pub launch_time: u64,

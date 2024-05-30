@@ -170,7 +170,7 @@ fn drain_tasks(graph: &mut ExecutionGraph) -> Result<()> {
     let executor = mock_executor("executor-id1".to_string());
     while let Some(task) = graph.pop_next_task(&executor.id)? {
         let task_status = mock_completed_task(task, &executor.id);
-        graph.update_task_status(&executor, vec![task_status], 1, 1)?;
+        graph.update_task_status(&executor, vec![task_status])?;
     }
 
     Ok(())
