@@ -249,7 +249,7 @@ impl UnresolvedStage {
         let config = SessionConfig::default();
         let plan = optimize_join.optimize(plan, config.options())?;
         let optimize_aggregate = AggregateStatistics::new();
-        let plan = optimize_aggregate.optimize(plan, SessionConfig::default().options())?;
+        let plan = optimize_aggregate.optimize(plan, config.options())?;
 
         Ok(ResolvedStage::new(
             self.stage_id,
