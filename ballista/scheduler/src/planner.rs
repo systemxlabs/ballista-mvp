@@ -200,11 +200,11 @@ pub fn remove_unresolved_shuffles(
                     .collect::<Vec<_>>()
                     .join("\n")
             );
-            new_children.push(Arc::new(ShuffleReaderExec::try_new(
+            new_children.push(Arc::new(ShuffleReaderExec::new(
                 unresolved_shuffle.stage_id,
                 relevant_locations,
                 unresolved_shuffle.schema().clone(),
-            )?))
+            )))
         } else {
             new_children.push(remove_unresolved_shuffles(child, partition_locations)?);
         }

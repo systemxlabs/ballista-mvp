@@ -70,17 +70,13 @@ pub struct ShuffleReaderExec {
 
 impl ShuffleReaderExec {
     /// Create a new ShuffleReaderExec
-    pub fn try_new(
-        stage_id: usize,
-        partition: Vec<Vec<PartitionLocation>>,
-        schema: SchemaRef,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(stage_id: usize, partition: Vec<Vec<PartitionLocation>>, schema: SchemaRef) -> Self {
+        Self {
             stage_id,
             schema,
             partition,
             metrics: ExecutionPlanMetricsSet::new(),
-        })
+        }
     }
 }
 
@@ -121,11 +117,11 @@ impl ExecutionPlan for ShuffleReaderExec {
         self: Arc<Self>,
         _children: Vec<Arc<dyn ExecutionPlan>>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        Ok(Arc::new(ShuffleReaderExec::try_new(
+        Ok(Arc::new(ShuffleReaderExec::new(
             self.stage_id,
             self.partition.clone(),
             self.schema.clone(),
-        )?))
+        )))
     }
 
     fn execute(
@@ -490,7 +486,7 @@ mod tests {
         }
 
         let shuffle_reader_exec =
-            ShuffleReaderExec::try_new(input_stage_id, vec![partitions], Arc::new(schema))?;
+            ShuffleReaderExec::new(input_stage_id, vec![partitions], Arc::new(schema));
         let mut stream = shuffle_reader_exec.execute(0, task_ctx)?;
         let batches = utils::collect_stream(&mut stream).await;
 
