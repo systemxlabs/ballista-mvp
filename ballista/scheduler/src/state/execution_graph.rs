@@ -132,7 +132,7 @@ pub struct RunningTaskInfo {
 }
 
 impl ExecutionGraph {
-    pub fn new(
+    pub fn try_new(
         scheduler_id: &str,
         job_id: &str,
         session_id: &str,
@@ -463,20 +463,6 @@ impl ExecutionGraph {
             }
         }
         Ok(resolved_stages)
-    }
-
-    /// Return all the currently running stage ids
-    pub fn running_stages(&self) -> Vec<usize> {
-        self.stages
-            .iter()
-            .filter_map(|(stage_id, stage)| {
-                if let ExecutionStage::Running(_running) = stage {
-                    Some(*stage_id)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>()
     }
 
     /// Return all currently running tasks along with the executor ID on which they are assigned

@@ -175,7 +175,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
         queued_at: u64,
     ) -> Result<()> {
         let mut graph =
-            ExecutionGraph::new(&self.scheduler_id, job_id, session_id, plan, queued_at)?;
+            ExecutionGraph::try_new(&self.scheduler_id, job_id, session_id, plan, queued_at)?;
         info!("Submitting execution graph: {:?}", graph);
 
         self.state.submit_job(job_id.to_string(), &graph).await?;
