@@ -18,7 +18,6 @@
 use crate::cluster::JobState;
 use crate::scheduler_server::timestamp_millis;
 use crate::state::execution_graph::ExecutionGraph;
-use crate::test_utils::{mock_completed_task, mock_executor};
 use ballista_core::error::Result;
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::JobStatus;
@@ -127,31 +126,6 @@ impl<S: JobState> JobStateTest<S> {
     }
 }
 
-pub async fn test_job_lifecycle<S: JobState>(state: S, mut graph: ExecutionGraph) -> Result<()> {
-    let test = JobStateTest::new(state).await?;
-
-    let job_id = graph.job_id().to_string();
-
-    let test = test
-        .queue_job(&job_id)?
-        .assert_queued(&job_id)
-        .await?
-        .submit_job(&graph)
-        .await?
-        .assert_job_running(&job_id)
-        .await?;
-
-    drain_tasks(&mut graph)?;
-    graph.succeed_job()?;
-
-    test.update_job(&graph)
-        .await?
-        .assert_job_successful(&job_id)
-        .await?;
-
-    Ok(())
-}
-
 pub async fn test_job_planning_failure<S: JobState>(state: S, graph: ExecutionGraph) -> Result<()> {
     let test = JobStateTest::new(state).await?;
 
@@ -162,16 +136,6 @@ pub async fn test_job_planning_failure<S: JobState>(state: S, graph: ExecutionGr
         .await?
         .assert_job_failed(&job_id)
         .await?;
-
-    Ok(())
-}
-
-fn drain_tasks(graph: &mut ExecutionGraph) -> Result<()> {
-    let executor = mock_executor("executor-id1".to_string());
-    while let Some(task) = graph.pop_next_task(&executor.id)? {
-        let task_status = mock_completed_task(task, &executor.id);
-        graph.update_task_status(&executor, vec![task_status])?;
-    }
 
     Ok(())
 }

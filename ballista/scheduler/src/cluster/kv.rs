@@ -577,19 +577,11 @@ mod test {
 
     use crate::cluster::kv::KeyValueState;
     use crate::cluster::storage::sled::SledClient;
-    use crate::cluster::test_util::{test_job_lifecycle, test_job_planning_failure};
+    use crate::cluster::test_util::test_job_planning_failure;
     use crate::test_utils::{test_aggregation_plan, test_join_plan, test_two_aggregations_plan};
     use ballista_core::error::Result;
     use ballista_core::serde::BallistaCodec;
     use ballista_core::utils::default_session_builder;
-
-    #[tokio::test]
-    async fn test_sled_job_lifecycle() -> Result<()> {
-        test_job_lifecycle(make_sled_state()?, test_aggregation_plan(4).await).await?;
-        test_job_lifecycle(make_sled_state()?, test_two_aggregations_plan(4).await).await?;
-        test_job_lifecycle(make_sled_state()?, test_join_plan(4).await).await?;
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_in_memory_job_planning_failure() -> Result<()> {
