@@ -50,6 +50,13 @@ arrow_cli --host localhost --port 50050 --user admin --password password
 +--------------+--------------+---------+--------------------+--------------------+--------------------+--------------------+-------------------+----------------------+-------------+
 ```
 
+# Chinese blog posts
+- [Ballista 分布式查询引擎 - 架构总览](https://systemxlabs.github.io/blog/ballista-mvp-part1/)
+- [Ballista 分布式查询引擎 - 分布式执行计划](https://systemxlabs.github.io/blog/ballista-mvp-part2/)
+- [Ballista 分布式查询引擎 - 事件驱动调度](https://systemxlabs.github.io/blog/ballista-mvp-part3/)
+- [Ballista 分布式查询引擎 - 集群共享状态](https://systemxlabs.github.io/blog/ballista-mvp-part4/)
+- [Ballista 分布式查询引擎 - 计划执行](https://systemxlabs.github.io/blog/ballista-mvp-part5/)
+
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow
 
 Ballista is a distributed SQL query engine powered by the Rust implementation of [Apache Arrow][arrow] and
