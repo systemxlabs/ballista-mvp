@@ -891,7 +891,6 @@ pub struct TaskDescription {
     pub session_id: String,
     pub partition: PartitionId,
     pub task_id: usize,
-    pub data_cache: bool,
     pub plan: Arc<dyn ExecutionPlan>,
 }
 
@@ -900,13 +899,12 @@ impl Debug for TaskDescription {
         let plan = DisplayableExecutionPlan::new(self.plan.as_ref()).indent(false);
         write!(
             f,
-            "TaskDescription[session_id: {},job: {}, stage: {}, partition: {} task_id {}, data cache {}]\n{}",
+            "TaskDescription[session_id: {}, job: {}, stage: {}, partition: {}, task_id: {}]\n{}",
             self.session_id,
             self.partition.job_id,
             self.partition.stage_id,
             self.partition.partition_id,
             self.task_id,
-            self.data_cache,
             plan
         )
     }

@@ -43,9 +43,9 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 
+use crate::scheduler_server::timestamp_millis;
 use tracing::trace;
 
 type ActiveJobCache = Arc<DashMap<String, JobInfoCache>>;
@@ -468,51 +468,24 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                     plan_buf
                 };
 
-                let launch_time = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64;
+                let launch_time = timestamp_millis();
 
-                let (tasks_with_data_cache, tasks_without_data_cache): (Vec<_>, Vec<_>) =
-                    tasks.into_iter().partition(|task| task.data_cache);
-
-                let mut multi_tasks = vec![];
-                if !tasks_with_data_cache.is_empty() {
-                    let task_ids = tasks_with_data_cache
-                        .into_iter()
-                        .map(|task| TaskId {
-                            task_id: task.task_id as u32,
-                            partition_id: task.partition.partition_id as u32,
-                        })
-                        .collect();
-                    multi_tasks.push(MultiTaskDefinition {
-                        task_ids,
-                        job_id: job_id.clone(),
-                        stage_id: stage_id as u32,
-                        plan: plan.clone(),
-                        session_id: session_id.clone(),
-                        launch_time,
-                        props: vec![],
-                    });
-                }
-                if !tasks_without_data_cache.is_empty() {
-                    let task_ids = tasks_without_data_cache
-                        .into_iter()
-                        .map(|task| TaskId {
-                            task_id: task.task_id as u32,
-                            partition_id: task.partition.partition_id as u32,
-                        })
-                        .collect();
-                    multi_tasks.push(MultiTaskDefinition {
-                        task_ids,
-                        job_id,
-                        stage_id: stage_id as u32,
-                        plan,
-                        session_id,
-                        launch_time,
-                        props: vec![],
-                    });
-                }
+                let task_ids = tasks
+                    .into_iter()
+                    .map(|task| TaskId {
+                        task_id: task.task_id as u32,
+                        partition_id: task.partition.partition_id as u32,
+                    })
+                    .collect();
+                let multi_tasks = vec![MultiTaskDefinition {
+                    task_ids,
+                    job_id,
+                    stage_id: stage_id as u32,
+                    plan,
+                    session_id,
+                    launch_time,
+                    props: vec![],
+                }];
 
                 Ok(multi_tasks)
             } else {

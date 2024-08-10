@@ -293,7 +293,6 @@ pub(crate) async fn bind_task_bias(
                     session_id: session_id.clone(),
                     partition,
                     task_id,
-                    data_cache: false,
                     plan: running_stage.plan.clone(),
                 };
                 schedulable_tasks.push((executor_id, task_desc));
@@ -368,7 +367,6 @@ pub(crate) async fn bind_task_round_robin(
                     session_id: session_id.clone(),
                     partition,
                     task_id,
-                    data_cache: false,
                     plan: running_stage.plan.clone(),
                 };
                 schedulable_tasks.push((executor_id, task_desc));
