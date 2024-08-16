@@ -17,14 +17,14 @@
 
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpc;
 use ballista_core::serde::protobuf::{
-    ExecutorHeartbeat, HeartBeatParams, HeartBeatResult, RegisterExecutorParams,
-    RegisterExecutorResult, UpdateTaskStatusParams, UpdateTaskStatusResult,
+    ExecutorHeartbeat, HeartBeatParams, HeartBeatResult, UpdateTaskStatusParams,
+    UpdateTaskStatusResult,
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
 use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
-use log::{debug, error, info, warn};
+use log::{debug, error, warn};
 
 use tonic::{Request, Response, Status};
 
@@ -34,37 +34,6 @@ use crate::scheduler_server::{timestamp_secs, SchedulerServer};
 impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
     for SchedulerServer<T, U>
 {
-    async fn register_executor(
-        &self,
-        request: Request<RegisterExecutorParams>,
-    ) -> Result<Response<RegisterExecutorResult>, Status> {
-        let remote_addr = request.remote_addr();
-        if let RegisterExecutorParams {
-            metadata: Some(metadata),
-        } = request.into_inner()
-        {
-            info!("Received register executor request for {:?}", metadata);
-            let metadata = ExecutorMetadata {
-                id: metadata.id,
-                host: remote_addr.map_or("localhost".to_string(), |addr| addr.ip().to_string()),
-                port: metadata.port as u16,
-                grpc_port: metadata.grpc_port as u16,
-                specification: metadata.specification.unwrap().into(),
-            };
-
-            self.do_register_executor(metadata).await.map_err(|e| {
-                let msg = format!("Fail to do executor registration due to: {e}");
-                error!("{}", msg);
-                Status::internal(msg)
-            })?;
-
-            Ok(Response::new(RegisterExecutorResult { success: true }))
-        } else {
-            warn!("Received invalid register executor request");
-            Err(Status::invalid_argument("Missing metadata in request"))
-        }
-    }
-
     async fn heart_beat_from_executor(
         &self,
         request: Request<HeartBeatParams>,
@@ -167,7 +136,6 @@ mod test {
     use ballista_core::error::BallistaError;
     use ballista_core::serde::protobuf::{
         executor_status, ExecutorRegistration, ExecutorStatus, HeartBeatParams,
-        RegisterExecutorParams,
     };
     use ballista_core::serde::scheduler::ExecutorSpecification;
     use ballista_core::serde::BallistaCodec;
@@ -251,17 +219,17 @@ mod test {
             specification: Some(ExecutorSpecification { task_slots: 2 }.into()),
         };
 
-        let request: Request<RegisterExecutorParams> = Request::new(RegisterExecutorParams {
+        let request: Request<HeartBeatParams> = Request::new(HeartBeatParams {
+            executor_id: exec_meta.id.clone(),
+            status: Some(ExecutorStatus {
+                status: Some(executor_status::Status::Active("".to_string())),
+            }),
             metadata: Some(exec_meta.clone()),
         });
-        let response = scheduler
-            .register_executor(request)
+        let _ = scheduler
+            .heart_beat_from_executor(request)
             .await
-            .expect("Received error response")
-            .into_inner();
-
-        // registration should success
-        assert!(response.success);
+            .expect("Received error response");
 
         let state = scheduler.state.clone();
         // executor should be registered

@@ -35,8 +35,8 @@ use ballista_core::serde::protobuf::{
     executor_status,
     scheduler_grpc_client::SchedulerGrpcClient,
     CancelTasksParams, CancelTasksResult, ExecutorStatus, HeartBeatParams, LaunchMultiTaskParams,
-    LaunchMultiTaskResult, RegisterExecutorParams, RemoveJobDataParams, RemoveJobDataResult,
-    TaskStatus, UpdateTaskStatusParams,
+    LaunchMultiTaskResult, RemoveJobDataParams, RemoveJobDataResult, TaskStatus,
+    UpdateTaskStatusParams,
 };
 use ballista_core::serde::scheduler::from_proto::get_task_definition_vec;
 use ballista_core::serde::scheduler::PartitionId;
@@ -75,7 +75,7 @@ struct CuratorTaskStatus {
 }
 
 pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
-    mut scheduler: SchedulerGrpcClient<Channel>,
+    scheduler: SchedulerGrpcClient<Channel>,
     config: Arc<ExecutorProcessConfig>,
     executor: Arc<Executor>,
     codec: BallistaCodec<T, U>,
@@ -116,53 +116,21 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
         })
     };
 
-    // 2. Do executor registration
-    // TODO the executor registration should happen only after the executor grpc server started.
     let executor_server = Arc::new(executor_server);
-    match register_executor(&mut scheduler, executor.clone()).await {
-        Ok(_) => {
-            info!("Executor registration succeed");
-        }
-        Err(error) => {
-            error!("Executor registration failed due to: {}", error);
-            // abort the Executor Grpc Future
-            server.abort();
-            return Err(error);
-        }
-    };
 
-    // 3. Start Heartbeater loop
+    // 2. Start Heartbeater loop
     {
         let heartbeater = Heartbeater::new(executor_server.clone());
         heartbeater.start(config.executor_heartbeat_interval_seconds);
     }
 
-    // 4. Start TaskRunnerPool loop
+    // 3. Start TaskRunnerPool loop
     {
         let task_runner_pool = TaskRunnerPool::new(executor_server.clone());
         task_runner_pool.start(rx_task, rx_task_status);
     }
 
     Ok(server)
-}
-
-#[allow(clippy::clone_on_copy)]
-async fn register_executor(
-    scheduler: &mut SchedulerGrpcClient<Channel>,
-    executor: Arc<Executor>,
-) -> Result<(), BallistaError> {
-    let result = scheduler
-        .register_executor(RegisterExecutorParams {
-            metadata: Some(executor.metadata.clone()),
-        })
-        .await?;
-    if result.into_inner().success {
-        Ok(())
-    } else {
-        Err(BallistaError::General(
-            "Executor registration failed!!!".to_owned(),
-        ))
-    }
 }
 
 #[derive(Clone)]

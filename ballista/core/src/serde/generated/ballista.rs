@@ -574,18 +574,6 @@ pub struct SessionSettings {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RegisterExecutorParams {
-    #[prost(message, optional, tag = "1")]
-    pub metadata: ::core::option::Option<ExecutorRegistration>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RegisterExecutorResult {
-    #[prost(bool, tag = "1")]
-    pub success: bool,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HeartBeatParams {
     #[prost(string, tag = "1")]
     pub executor_id: ::prost::alloc::string::String,
@@ -809,36 +797,6 @@ pub mod scheduler_grpc_client {
         pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
-        }
-        pub async fn register_executor(
-            &mut self,
-            request: impl tonic::IntoRequest<super::RegisterExecutorParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::RegisterExecutorResult>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/ballista.protobuf.SchedulerGrpc/RegisterExecutor",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "ballista.protobuf.SchedulerGrpc",
-                        "RegisterExecutor",
-                    ),
-                );
-            self.inner.unary(req, path, codec).await
         }
         pub async fn heart_beat_from_executor(
             &mut self,
@@ -1077,13 +1035,6 @@ pub mod scheduler_grpc_server {
     /// Generated trait containing gRPC methods that should be implemented for use with SchedulerGrpcServer.
     #[async_trait]
     pub trait SchedulerGrpc: Send + Sync + 'static {
-        async fn register_executor(
-            &self,
-            request: tonic::Request<super::RegisterExecutorParams>,
-        ) -> std::result::Result<
-            tonic::Response<super::RegisterExecutorResult>,
-            tonic::Status,
-        >;
         async fn heart_beat_from_executor(
             &self,
             request: tonic::Request<super::HeartBeatParams>,
@@ -1175,53 +1126,6 @@ pub mod scheduler_grpc_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/ballista.protobuf.SchedulerGrpc/RegisterExecutor" => {
-                    #[allow(non_camel_case_types)]
-                    struct RegisterExecutorSvc<T: SchedulerGrpc>(pub Arc<T>);
-                    impl<
-                        T: SchedulerGrpc,
-                    > tonic::server::UnaryService<super::RegisterExecutorParams>
-                    for RegisterExecutorSvc<T> {
-                        type Response = super::RegisterExecutorResult;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::RegisterExecutorParams>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                <T as SchedulerGrpc>::register_executor(&inner, request)
-                                    .await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = RegisterExecutorSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
                 "/ballista.protobuf.SchedulerGrpc/HeartBeatFromExecutor" => {
                     #[allow(non_camel_case_types)]
                     struct HeartBeatFromExecutorSvc<T: SchedulerGrpc>(pub Arc<T>);

@@ -349,14 +349,6 @@ message SessionSettings {
   repeated KeyValuePair configs = 1;
 }
 
-message RegisterExecutorParams {
-  ExecutorRegistration metadata = 1;
-}
-
-message RegisterExecutorResult {
-  bool success = 1;
-}
-
 message HeartBeatParams {
   string executor_id = 1;
   ExecutorStatus status = 2;
@@ -446,8 +438,6 @@ message RunningTaskInfo {
 }
 
 service SchedulerGrpc {
-  rpc RegisterExecutor(RegisterExecutorParams) returns (RegisterExecutorResult) {}
-
   rpc HeartBeatFromExecutor (HeartBeatParams) returns (HeartBeatResult) {}
 
   rpc UpdateTaskStatus (UpdateTaskStatusParams) returns (UpdateTaskStatusResult) {}
