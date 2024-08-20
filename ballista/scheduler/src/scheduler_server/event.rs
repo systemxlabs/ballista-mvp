@@ -60,7 +60,6 @@ pub enum QueryStageSchedulerEvent {
     JobCancel(String),
     TaskUpdating(String, Vec<TaskStatus>),
     ReviveOffers,
-    ExecutorLost(String, Option<String>),
     CancelTasks(Vec<RunningTaskInfo>),
 }
 
@@ -116,12 +115,6 @@ impl Debug for QueryStageSchedulerEvent {
             }
             QueryStageSchedulerEvent::ReviveOffers => {
                 write!(f, "ReviveOffers.")
-            }
-            QueryStageSchedulerEvent::ExecutorLost(executor_id, reason) => {
-                write!(
-                    f,
-                    "ExecutorLost : executor_id={executor_id}, reason:[{reason:?}]."
-                )
             }
             QueryStageSchedulerEvent::CancelTasks(status) => {
                 write!(f, "CancelTasks : status:[{status:?}].")

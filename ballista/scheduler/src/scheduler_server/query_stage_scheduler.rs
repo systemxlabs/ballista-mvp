@@ -227,27 +227,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<Query
             QueryStageSchedulerEvent::ReviveOffers => {
                 self.state.revive_offers(event_sender).await?;
             }
-            QueryStageSchedulerEvent::ExecutorLost(executor_id, _) => {
-                match self.state.task_manager.executor_lost(&executor_id).await {
-                    Ok(tasks) => {
-                        if !tasks.is_empty() {
-                            if let Err(e) = self
-                                .state
-                                .executor_manager
-                                .cancel_running_tasks(tasks)
-                                .await
-                            {
-                                warn!("Fail to cancel running tasks due to {:?}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        let msg =
-                            format!("TaskManager error to handle Executor {executor_id} lost: {e}");
-                        error!("{}", msg);
-                    }
-                }
-            }
             QueryStageSchedulerEvent::CancelTasks(tasks) => {
                 if let Err(e) = self
                     .state

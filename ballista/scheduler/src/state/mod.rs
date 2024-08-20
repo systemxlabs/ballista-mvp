@@ -166,22 +166,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerState<T,
         {
             warn!("Fail to remove executor {}: {}", executor_id, e);
         }
-
-        match self.task_manager.executor_lost(executor_id).await {
-            Ok(tasks) => {
-                if !tasks.is_empty() {
-                    if let Err(e) = self.executor_manager.cancel_running_tasks(tasks).await {
-                        warn!("Fail to cancel running tasks due to {:?}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "TaskManager error to handle Executor {} lost: {}",
-                    executor_id, e
-                );
-            }
-        }
     }
 
     /// Given a vector of bound tasks,

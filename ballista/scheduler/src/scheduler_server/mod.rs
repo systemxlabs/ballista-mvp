@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ballista_core::error::Result;
-use ballista_core::event_loop::{EventLoop, EventSender};
+use ballista_core::event_loop::EventLoop;
 use ballista_core::serde::protobuf::TaskStatus;
 use ballista_core::serde::BallistaCodec;
 
@@ -154,14 +154,11 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
     /// expire the dead executors
     fn expire_dead_executors(&self) -> Result<()> {
         let state = self.state.clone();
-        let event_sender = self.query_stage_event_loop.get_sender()?;
         tokio::task::spawn(async move {
             loop {
                 let expired_executors = state.executor_manager.get_expired_executors();
                 for expired in expired_executors {
                     let executor_id = expired.executor_id.clone();
-
-                    let sender_clone = event_sender.clone();
 
                     let terminating = matches!(
                         expired
@@ -190,7 +187,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
                     // If executor is expired, remove it immediately
                     Self::remove_executor(
                         state.executor_manager.clone(),
-                        sender_clone,
                         &executor_id,
                         Some(stop_reason.clone()),
                         0,
@@ -207,7 +203,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
 
     pub(crate) fn remove_executor(
         executor_manager: ExecutorManager,
-        event_sender: EventSender<QueryStageSchedulerEvent>,
         executor_id: &str,
         reason: Option<String>,
         wait_secs: u64,
@@ -223,13 +218,6 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T
                 .await
             {
                 error!("error removing executor {executor_id}: {e:?}");
-            }
-
-            if let Err(e) = event_sender
-                .post_event(QueryStageSchedulerEvent::ExecutorLost(executor_id, reason))
-                .await
-            {
-                error!("error sending ExecutorLost event: {e:?}");
             }
         });
     }
