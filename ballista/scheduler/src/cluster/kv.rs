@@ -371,7 +371,10 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
             .await?;
         self.executor_heartbeats.remove(executor_id);
 
-        // TODO Check the Executor reservation logic for push-based scheduling
+        self.store
+            .put(Keyspace::Executors, executor_id.to_string(), vec![])
+            .await?;
+        self.executors.remove(executor_id);
 
         Ok(())
     }
