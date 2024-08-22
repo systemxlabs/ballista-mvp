@@ -30,7 +30,6 @@ use crate::scheduler_server::{timestamp_millis, SchedulerServer};
 use crate::state::executor_manager::ExecutorManager;
 use crate::state::task_manager::TaskLauncher;
 
-use ballista_core::config::{BallistaConfig, BALLISTA_DEFAULT_SHUFFLE_PARTITIONS};
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::{
     task_status, FailedTask, JobStatus, MultiTaskDefinition, ShuffleWritePartition, SuccessfulTask,
@@ -368,7 +367,7 @@ impl TaskLauncher for VirtualTaskLauncher {
 
 pub struct SchedulerTest {
     scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode>,
-    ballista_config: BallistaConfig,
+    ballista_config: HashMap<String, String>,
     status_receiver: Option<Receiver<(String, Vec<TaskStatus>)>>,
 }
 
@@ -382,14 +381,14 @@ impl SchedulerTest {
         let cluster = BallistaCluster::new_from_config(&config).await?;
 
         let ballista_config = if num_executors > 0 && task_slots_per_executor > 0 {
-            BallistaConfig::builder()
-                .set(
-                    BALLISTA_DEFAULT_SHUFFLE_PARTITIONS,
-                    format!("{}", num_executors * task_slots_per_executor).as_str(),
-                )
-                .build()?
+            let mut config = HashMap::new();
+            config.insert(
+                "datafusion.execution.target_partitions".to_string(),
+                format!("{}", num_executors * task_slots_per_executor),
+            );
+            config
         } else {
-            BallistaConfig::builder().build()?
+            HashMap::new()
         };
 
         let runner = runner.unwrap_or_else(|| Arc::new(default_task_runner()));

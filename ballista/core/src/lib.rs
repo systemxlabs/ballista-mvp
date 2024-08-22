@@ -19,7 +19,6 @@
 pub const BALLISTA_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub mod client;
-pub mod config;
 pub mod error;
 pub mod event_loop;
 pub mod execution_plans;

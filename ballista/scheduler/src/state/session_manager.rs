@@ -16,9 +16,9 @@
 // under the License.
 
 use crate::scheduler_server::SessionBuilder;
-use ballista_core::config::BallistaConfig;
 use ballista_core::error::Result;
 use datafusion::prelude::{SessionConfig, SessionContext};
+use std::collections::HashMap;
 
 use crate::cluster::JobState;
 use std::sync::Arc;
@@ -33,7 +33,10 @@ impl SessionManager {
         Self { state }
     }
 
-    pub async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
+    pub async fn create_session(
+        &self,
+        config: &HashMap<String, String>,
+    ) -> Result<Arc<SessionContext>> {
         self.state.create_session(config).await
     }
 
@@ -44,23 +47,11 @@ impl SessionManager {
 
 /// Create a DataFusion session context that is compatible with Ballista Configuration
 pub fn create_datafusion_context(
-    ballista_config: &BallistaConfig,
+    ballista_config: &HashMap<String, String>,
     session_builder: SessionBuilder,
 ) -> Arc<SessionContext> {
-    let config = SessionConfig::from_string_hash_map(ballista_config.settings().clone()).unwrap();
-    let config = config
-        .with_target_partitions(ballista_config.default_shuffle_partitions())
-        .with_batch_size(ballista_config.default_batch_size())
-        .with_repartition_joins(ballista_config.repartition_joins())
-        .with_repartition_aggregations(ballista_config.repartition_aggregations())
-        .with_repartition_windows(ballista_config.repartition_windows())
-        .with_collect_statistics(ballista_config.collect_statistics())
-        .with_parquet_pruning(ballista_config.parquet_pruning())
-        .set_usize(
-            "datafusion.optimizer.hash_join_single_partition_threshold",
-            ballista_config.hash_join_single_partition_threshold(),
-        )
-        .set_bool("datafusion.optimizer.enable_round_robin_repartition", false);
+    let config = SessionConfig::from_string_hash_map(ballista_config.clone()).unwrap();
+    let config = config.set_bool("datafusion.optimizer.enable_round_robin_repartition", false);
     let session_state = session_builder(config);
     Arc::new(SessionContext::new_with_state(session_state))
 }

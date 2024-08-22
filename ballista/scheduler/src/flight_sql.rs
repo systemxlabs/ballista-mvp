@@ -30,6 +30,7 @@ use arrow_flight::{
 use base64::Engine;
 use futures::Stream;
 use log::{debug, error, warn};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -43,7 +44,6 @@ use arrow_flight::flight_service_client::FlightServiceClient;
 use arrow_flight::sql::ProstMessageExt;
 use arrow_flight::utils::batches_to_flight_data;
 use arrow_flight::SchemaAsIpc;
-use ballista_core::config::BallistaConfig;
 use ballista_core::serde::protobuf;
 use ballista_core::serde::protobuf::action::ActionType::FetchPartition;
 use ballista_core::serde::protobuf::job_status;
@@ -124,15 +124,11 @@ impl FlightSqlServiceImpl {
     }
 
     async fn create_ctx(&self) -> Result<Uuid, Status> {
-        let config_builder = BallistaConfig::builder();
-        let config = config_builder
-            .build()
-            .map_err(|e| Status::internal(format!("Error building config: {e}")))?;
         let ctx = self
             .server
             .state
             .session_manager
-            .create_session(&config)
+            .create_session(&HashMap::new())
             .await
             .map_err(|e| Status::internal(format!("Failed to create SessionContext: {e:?}")))?;
         let handle = Uuid::new_v4();

@@ -26,7 +26,6 @@ use crate::state::session_manager::create_datafusion_context;
 use crate::state::task_manager::JobInfoCache;
 use crate::state::{decode_into, decode_protobuf};
 use async_trait::async_trait;
-use ballista_core::config::BallistaConfig;
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::serde::protobuf::{
@@ -67,7 +66,7 @@ pub struct KeyValueState<
     scheduler: String,
     /// In-memory store of queued jobs. Map from Job ID -> queued_at timestamp
     queued_jobs: DashMap<String, u64>,
-    //// `SessionBuilder` for constructing `SessionContext` from stored `BallistaConfig`
+    /// `SessionBuilder` for constructing `SessionContext` from stored `BallistaConfig`
     session_builder: SessionBuilder,
 }
 
@@ -534,19 +533,21 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 
         let settings: protobuf::SessionSettings = decode_protobuf(&value)?;
 
-        let mut config_builder = BallistaConfig::builder();
-        for kv_pair in &settings.configs {
-            config_builder = config_builder.set(&kv_pair.key, &kv_pair.value);
+        let mut config = HashMap::new();
+        for kv_pair in settings.configs {
+            config.insert(kv_pair.key, kv_pair.value);
         }
-        let config = config_builder.build()?;
 
         Ok(create_datafusion_context(&config, self.session_builder))
     }
 
-    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>> {
+    async fn create_session(
+        &self,
+        config: &HashMap<String, String>,
+    ) -> Result<Arc<SessionContext>> {
         let mut settings: Vec<KeyValuePair> = vec![];
 
-        for (key, value) in config.settings() {
+        for (key, value) in config {
             settings.push(KeyValuePair {
                 key: key.clone(),
                 value: value.clone(),

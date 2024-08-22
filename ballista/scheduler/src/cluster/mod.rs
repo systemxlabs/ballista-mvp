@@ -25,7 +25,6 @@ use datafusion_proto::physical_plan::AsExecutionPlan;
 use futures::Stream;
 use log::{debug, info, warn};
 
-use ballista_core::config::BallistaConfig;
 use ballista_core::error::{BallistaError, Result};
 use ballista_core::serde::protobuf::{
     job_status, AvailableTaskSlots, ExecutorHeartbeat, JobStatus,
@@ -230,7 +229,8 @@ pub trait JobState: Send + Sync {
     async fn get_session(&self, session_id: &str) -> Result<Arc<SessionContext>>;
 
     /// Create a new saved session
-    async fn create_session(&self, config: &BallistaConfig) -> Result<Arc<SessionContext>>;
+    async fn create_session(&self, config: &HashMap<String, String>)
+        -> Result<Arc<SessionContext>>;
 }
 
 pub(crate) async fn bind_task_bias(
