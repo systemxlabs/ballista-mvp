@@ -14,8 +14,6 @@ mod handlers;
 
 use crate::scheduler_server::SchedulerServer;
 use anyhow::Result;
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 use std::{
     pin::Pin,
     task::{Context as TaskContext, Poll},
@@ -73,15 +71,13 @@ fn map_option_err<T, U: Into<Error>>(err: Option<Result<T, U>>) -> Option<Result
     err.map(|e| e.map_err(Into::into))
 }
 
-fn with_data_server<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
-    db: SchedulerServer<T, U>,
-) -> impl Filter<Extract = (SchedulerServer<T, U>,), Error = std::convert::Infallible> + Clone {
+fn with_data_server(
+    db: SchedulerServer,
+) -> impl Filter<Extract = (SchedulerServer,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
 }
 
-pub fn get_routes<T: AsLogicalPlan + Clone, U: 'static + AsExecutionPlan>(
-    scheduler_server: SchedulerServer<T, U>,
-) -> BoxedFilter<(impl Reply,)> {
+pub fn get_routes(scheduler_server: SchedulerServer) -> BoxedFilter<(impl Reply,)> {
     let route_scheduler_state = warp::path!("api" / "state")
         .and(with_data_server(scheduler_server.clone()))
         .and_then(handlers::get_scheduler_state);

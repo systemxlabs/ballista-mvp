@@ -28,7 +28,6 @@ use datafusion::physical_plan::display::DisplayableExecutionPlan;
 use datafusion::physical_plan::metrics::{MetricValue, MetricsSet};
 use datafusion::physical_plan::{ExecutionPlan, Metric};
 use datafusion::prelude::{SessionConfig, SessionContext};
-use datafusion_proto::logical_plan::AsLogicalPlan;
 use log::{debug, warn};
 
 use ballista_core::error::{BallistaError, Result};
@@ -40,6 +39,7 @@ use ballista_core::serde::protobuf::{task_status, RunningTask};
 use ballista_core::serde::scheduler::PartitionLocation;
 use ballista_core::serde::BallistaCodec;
 use datafusion_proto::physical_plan::AsExecutionPlan;
+use datafusion_proto::protobuf::PhysicalPlanNode;
 
 use crate::display::DisplayableBallistaExecutionPlan;
 
@@ -260,12 +260,12 @@ impl UnresolvedStage {
         ))
     }
 
-    pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn decode(
         stage: protobuf::UnResolvedStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
         session_ctx: &SessionContext,
     ) -> Result<UnresolvedStage> {
-        let plan_proto = U::try_decode(&stage.plan)?;
+        let plan_proto = PhysicalPlanNode::try_decode(&stage.plan)?;
         let plan = plan_proto.try_into_physical_plan(
             session_ctx,
             session_ctx.runtime_env().as_ref(),
@@ -282,12 +282,12 @@ impl UnresolvedStage {
         })
     }
 
-    pub(super) fn encode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn encode(
         stage: UnresolvedStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
     ) -> Result<protobuf::UnResolvedStage> {
         let mut plan: Vec<u8> = vec![];
-        U::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
+        PhysicalPlanNode::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
             .and_then(|proto| proto.try_encode(&mut plan))?;
 
         let inputs = encode_inputs(stage.inputs)?;
@@ -345,12 +345,12 @@ impl ResolvedStage {
         )
     }
 
-    pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn decode(
         stage: protobuf::ResolvedStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
         session_ctx: &SessionContext,
     ) -> Result<ResolvedStage> {
-        let plan_proto = U::try_decode(&stage.plan)?;
+        let plan_proto = PhysicalPlanNode::try_decode(&stage.plan)?;
         let plan = plan_proto.try_into_physical_plan(
             session_ctx,
             session_ctx.runtime_env().as_ref(),
@@ -368,12 +368,12 @@ impl ResolvedStage {
         })
     }
 
-    pub(super) fn encode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn encode(
         stage: ResolvedStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
     ) -> Result<protobuf::ResolvedStage> {
         let mut plan: Vec<u8> = vec![];
-        U::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
+        PhysicalPlanNode::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
             .and_then(|proto| proto.try_encode(&mut plan))?;
 
         let inputs = encode_inputs(stage.inputs)?;
@@ -618,12 +618,12 @@ impl Debug for RunningStage {
 }
 
 impl SuccessfulStage {
-    pub(super) fn decode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn decode(
         stage: protobuf::SuccessfulStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
         session_ctx: &SessionContext,
     ) -> Result<SuccessfulStage> {
-        let plan_proto = U::try_decode(&stage.plan)?;
+        let plan_proto = PhysicalPlanNode::try_decode(&stage.plan)?;
         let plan = plan_proto.try_into_physical_plan(
             session_ctx,
             session_ctx.runtime_env().as_ref(),
@@ -654,15 +654,15 @@ impl SuccessfulStage {
         })
     }
 
-    pub(super) fn encode<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub(super) fn encode(
         _job_id: String,
         stage: SuccessfulStage,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
     ) -> Result<protobuf::SuccessfulStage> {
         let stage_id = stage.stage_id;
 
         let mut plan: Vec<u8> = vec![];
-        U::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
+        PhysicalPlanNode::try_from_physical_plan(stage.plan, codec.physical_extension_codec())
             .and_then(|proto| proto.try_encode(&mut plan))?;
 
         let inputs = encode_inputs(stage.inputs)?;

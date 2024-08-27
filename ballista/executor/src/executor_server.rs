@@ -48,7 +48,6 @@ use datafusion::common::DataFusionError;
 use datafusion::config::ConfigOptions;
 use datafusion::execution::TaskContext;
 use datafusion::prelude::SessionConfig;
-use datafusion_proto::{logical_plan::AsLogicalPlan, physical_plan::AsExecutionPlan};
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::task::JoinHandle;
 
@@ -74,11 +73,11 @@ struct CuratorTaskStatus {
     task_status: TaskStatus,
 }
 
-pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+pub async fn startup(
     scheduler: SchedulerGrpcClient<Channel>,
     config: Arc<ExecutorProcessConfig>,
     executor: Arc<Executor>,
-    codec: BallistaCodec<T, U>,
+    codec: BallistaCodec,
 ) -> Result<ServerHandle, BallistaError> {
     let channel_buf_size = executor.concurrent_tasks * 50;
     let (tx_task, rx_task) = mpsc::channel::<CuratorTaskDefinition>(channel_buf_size);
@@ -134,11 +133,11 @@ pub async fn startup<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
 }
 
 #[derive(Clone)]
-pub struct ExecutorServer<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
+pub struct ExecutorServer {
     _start_time: u128,
     executor: Arc<Executor>,
     executor_env: ExecutorEnv,
-    codec: BallistaCodec<T, U>,
+    codec: BallistaCodec,
     scheduler_to_register: SchedulerGrpcClient<Channel>,
     schedulers: SchedulerClients,
 }
@@ -157,12 +156,12 @@ unsafe impl Sync for ExecutorEnv {}
 /// set to `true` when the executor receives a shutdown signal
 pub static TERMINATING: AtomicBool = AtomicBool::new(false);
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T, U> {
+impl ExecutorServer {
     fn new(
         scheduler_to_register: SchedulerGrpcClient<Channel>,
         executor: Arc<Executor>,
         executor_env: ExecutorEnv,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
     ) -> Self {
         Self {
             _start_time: SystemTime::now()
@@ -370,12 +369,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorServer<T,
 }
 
 /// Heartbeater will run forever.
-struct Heartbeater<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
-    executor_server: Arc<ExecutorServer<T, U>>,
+struct Heartbeater {
+    executor_server: Arc<ExecutorServer>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> Heartbeater<T, U> {
-    fn new(executor_server: Arc<ExecutorServer<T, U>>) -> Self {
+impl Heartbeater {
+    fn new(executor_server: Arc<ExecutorServer>) -> Self {
         Self { executor_server }
     }
 
@@ -395,12 +394,12 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> Heartbeater<T, U>
 /// First is for sending back task status to scheduler
 /// Second is for receiving task from scheduler and run.
 /// The two loops will run forever.
-struct TaskRunnerPool<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
-    executor_server: Arc<ExecutorServer<T, U>>,
+struct TaskRunnerPool {
+    executor_server: Arc<ExecutorServer>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T, U> {
-    fn new(executor_server: Arc<ExecutorServer<T, U>>) -> Self {
+impl TaskRunnerPool {
+    fn new(executor_server: Arc<ExecutorServer>) -> Self {
         Self { executor_server }
     }
 
@@ -511,9 +510,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskRunnerPool<T,
 }
 
 #[tonic::async_trait]
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ExecutorGrpc
-    for ExecutorServer<T, U>
-{
+impl ExecutorGrpc for ExecutorServer {
     /// by this interface, it can reduce the deserialization cost for multiple tasks
     /// belong to the same job stage running on the same one executor
     async fn launch_multi_task(

@@ -60,7 +60,6 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::DFSchemaRef;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::SessionContext;
-use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 use prost::Message;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::time::sleep;
@@ -69,7 +68,7 @@ use tonic::metadata::MetadataValue;
 use uuid::Uuid;
 
 pub struct FlightSqlServiceImpl {
-    server: SchedulerServer<LogicalPlanNode, PhysicalPlanNode>,
+    server: SchedulerServer,
     statements: Arc<DashMap<Uuid, LogicalPlan>>,
     contexts: Arc<DashMap<Uuid, Arc<SessionContext>>>,
 }
@@ -77,7 +76,7 @@ pub struct FlightSqlServiceImpl {
 const TABLE_TYPES: [&str; 2] = ["TABLE", "VIEW"];
 
 impl FlightSqlServiceImpl {
-    pub fn new(server: SchedulerServer<LogicalPlanNode, PhysicalPlanNode>) -> Self {
+    pub fn new(server: SchedulerServer) -> Self {
         Self {
             server,
             statements: Default::default(),

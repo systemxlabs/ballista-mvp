@@ -24,7 +24,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use datafusion::physical_plan::display::DisplayableExecutionPlan;
 use datafusion::physical_plan::{accept, ExecutionPlan, ExecutionPlanVisitor};
 use datafusion::prelude::SessionContext;
-use datafusion_proto::logical_plan::AsLogicalPlan;
 use log::{debug, info, warn};
 
 use ballista_core::error::{BallistaError, Result};
@@ -39,7 +38,6 @@ use ballista_core::serde::scheduler::{
     ExecutorMetadata, PartitionId, PartitionLocation, PartitionStats,
 };
 use ballista_core::serde::BallistaCodec;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 
 use crate::display::print_stage_metrics;
 use crate::planner::DistributedPlanner;
@@ -636,12 +634,9 @@ impl ExecutionGraph {
         Ok(())
     }
 
-    pub(crate) async fn decode_execution_graph<
-        T: 'static + AsLogicalPlan,
-        U: 'static + AsExecutionPlan,
-    >(
+    pub(crate) async fn decode_execution_graph(
         proto: protobuf::ExecutionGraph,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
         session_ctx: &SessionContext,
     ) -> Result<ExecutionGraph> {
         let mut stages: HashMap<usize, ExecutionStage> = HashMap::new();
@@ -693,12 +688,9 @@ impl ExecutionGraph {
 
     /// Running stages will not be persisted so that will not be encoded.
     /// Running stages will be convert back to the resolved stages to be encoded and persisted
-    pub(crate) fn encode_execution_graph<
-        T: 'static + AsLogicalPlan,
-        U: 'static + AsExecutionPlan,
-    >(
+    pub(crate) fn encode_execution_graph(
         graph: ExecutionGraph,
-        codec: &BallistaCodec<T, U>,
+        codec: &BallistaCodec,
     ) -> Result<protobuf::ExecutionGraph> {
         let job_id = graph.job_id().to_owned();
 

@@ -25,30 +25,26 @@ use ballista_core::event_loop::{EventAction, EventSender};
 
 use crate::config::SchedulerConfig;
 use crate::scheduler_server::timestamp_millis;
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 use tokio::sync::mpsc;
 
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 
 use crate::state::SchedulerState;
 
-pub(crate) struct QueryStageScheduler<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
-    state: Arc<SchedulerState<T, U>>,
+pub(crate) struct QueryStageScheduler {
+    state: Arc<SchedulerState>,
     #[allow(dead_code)]
     config: Arc<SchedulerConfig>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> QueryStageScheduler<T, U> {
-    pub(crate) fn new(state: Arc<SchedulerState<T, U>>, config: Arc<SchedulerConfig>) -> Self {
+impl QueryStageScheduler {
+    pub(crate) fn new(state: Arc<SchedulerState>, config: Arc<SchedulerConfig>) -> Self {
         Self { state, config }
     }
 }
 
 #[async_trait]
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> EventAction<QueryStageSchedulerEvent>
-    for QueryStageScheduler<T, U>
-{
+impl EventAction<QueryStageSchedulerEvent> for QueryStageScheduler {
     fn on_start(&self) {
         info!("Starting QueryStageScheduler");
     }

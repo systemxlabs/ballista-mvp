@@ -34,8 +34,8 @@ use ballista_core::serde::BallistaCodec;
 use dashmap::DashMap;
 
 use datafusion::physical_plan::ExecutionPlan;
-use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
+use datafusion_proto::protobuf::PhysicalPlanNode;
 use log::{debug, error, info, warn};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -101,9 +101,9 @@ impl TaskLauncher for DefaultTaskLauncher {
 }
 
 #[derive(Clone)]
-pub struct TaskManager<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
+pub struct TaskManager {
     state: Arc<dyn JobState>,
-    codec: BallistaCodec<T, U>,
+    codec: BallistaCodec,
     scheduler_id: String,
     // Cache for active jobs curated by this scheduler
     active_job_cache: ActiveJobCache,
@@ -138,10 +138,10 @@ pub struct UpdatedStages {
     pub failed_stages: HashMap<usize, String>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U> {
+impl TaskManager {
     pub fn new(
         state: Arc<dyn JobState>,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
         scheduler_id: String,
         launcher: Arc<dyn TaskLauncher>,
     ) -> Self {
@@ -455,7 +455,7 @@ impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> TaskManager<T, U>
                     plan.clone()
                 } else {
                     let mut plan_buf: Vec<u8> = vec![];
-                    let plan_proto = U::try_from_physical_plan(
+                    let plan_proto = PhysicalPlanNode::try_from_physical_plan(
                         task.plan.clone(),
                         self.codec.physical_extension_codec(),
                     )?;

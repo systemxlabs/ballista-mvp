@@ -34,7 +34,6 @@ use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
 use datafusion::execution::runtime_env::{RuntimeConfig, RuntimeEnv};
-use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 
 use ballista_core::error::BallistaError;
 use ballista_core::serde::protobuf::executor_resource::Resource;
@@ -143,7 +142,7 @@ pub async fn start_executor_process(opt: Arc<ExecutorProcessConfig>) -> Result<(
         .max_encoding_message_size(16 * 1024 * 1024)
         .max_decoding_message_size(16 * 1024 * 1024);
 
-    let default_codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> = BallistaCodec::default();
+    let default_codec: BallistaCodec = BallistaCodec::default();
 
     let mut service_handlers: FuturesUnordered<JoinHandle<Result<(), BallistaError>>> =
         FuturesUnordered::new();

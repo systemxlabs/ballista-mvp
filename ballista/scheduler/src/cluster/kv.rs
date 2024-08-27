@@ -36,9 +36,6 @@ use ballista_core::serde::scheduler::{ExecutorData, ExecutorMetadata};
 use ballista_core::serde::BallistaCodec;
 use dashmap::DashMap;
 use datafusion::prelude::SessionContext;
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
-use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 use futures::StreamExt;
 use itertools::Itertools;
 use log::info;
@@ -48,11 +45,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 /// State implementation based on underlying `KeyValueStore`
-pub struct KeyValueState<
-    S: KeyValueStore,
-    T: 'static + AsLogicalPlan = LogicalPlanNode,
-    U: 'static + AsExecutionPlan = PhysicalPlanNode,
-> {
+pub struct KeyValueState<S: KeyValueStore> {
     /// Underlying `KeyValueStore`
     store: S,
     /// ExecutorMetadata cache, executor_id -> ExecutorMetadata
@@ -60,7 +53,7 @@ pub struct KeyValueState<
     /// ExecutorHeartbeat cache, executor_id -> ExecutorHeartbeat
     executor_heartbeats: Arc<DashMap<String, ExecutorHeartbeat>>,
     /// Codec used to serialize/deserialize execution plan
-    codec: BallistaCodec<T, U>,
+    codec: BallistaCodec,
     /// Name of current scheduler. Should be `{host}:{port}`
     #[allow(dead_code)]
     scheduler: String,
@@ -70,13 +63,11 @@ pub struct KeyValueState<
     session_builder: SessionBuilder,
 }
 
-impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
-    KeyValueState<S, T, U>
-{
+impl<S: KeyValueStore> KeyValueState<S> {
     pub fn new(
         scheduler: impl Into<String>,
         store: S,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
         session_builder: SessionBuilder,
     ) -> Self {
         Self {
@@ -134,9 +125,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 }
 
 #[async_trait]
-impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> ClusterState
-    for KeyValueState<S, T, U>
-{
+impl<S: KeyValueStore> ClusterState for KeyValueState<S> {
     /// Initialize a background process that will listen for executor heartbeats and update the in-memory cache
     /// of executor heartbeats
     async fn init(&self) -> Result<()> {
@@ -393,9 +382,7 @@ impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>
 }
 
 #[async_trait]
-impl<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> JobState
-    for KeyValueState<S, T, U>
-{
+impl<S: KeyValueStore> JobState for KeyValueState<S> {
     fn accept_job(&self, job_id: &str, queued_at: u64) -> Result<()> {
         self.queued_jobs.insert(job_id.to_string(), queued_at);
 

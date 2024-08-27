@@ -21,8 +21,8 @@ use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::physical_plan::metrics::{Count, Gauge, MetricValue, MetricsSet, Time, Timestamp};
 use datafusion::physical_plan::{ExecutionPlan, Metric};
 use datafusion::prelude::SessionContext;
-use datafusion_proto::logical_plan::AsLogicalPlan;
 use datafusion_proto::physical_plan::AsExecutionPlan;
+use datafusion_proto::protobuf::PhysicalPlanNode;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -242,10 +242,10 @@ impl Into<ExecutorSpecification> for protobuf::ExecutorSpecification {
     }
 }
 
-pub fn get_task_definition_vec<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+pub fn get_task_definition_vec(
     multi_task: protobuf::MultiTaskDefinition,
     runtime: Arc<RuntimeEnv>,
-    codec: BallistaCodec<T, U>,
+    codec: BallistaCodec,
 ) -> Result<Vec<TaskDefinition>, BallistaError> {
     let mut props = HashMap::new();
     for kv_pair in multi_task.props {
@@ -254,13 +254,14 @@ pub fn get_task_definition_vec<T: 'static + AsLogicalPlan, U: 'static + AsExecut
     let props = Arc::new(props);
 
     let encoded_plan = multi_task.plan.as_slice();
-    let plan: Arc<dyn ExecutionPlan> = U::try_decode(encoded_plan).and_then(|proto| {
-        proto.try_into_physical_plan(
-            &SessionContext::new(),
-            runtime.as_ref(),
-            codec.physical_extension_codec(),
-        )
-    })?;
+    let plan: Arc<dyn ExecutionPlan> =
+        PhysicalPlanNode::try_decode(encoded_plan).and_then(|proto| {
+            proto.try_into_physical_plan(
+                &SessionContext::new(),
+                runtime.as_ref(),
+                codec.physical_extension_codec(),
+            )
+        })?;
 
     let job_id = multi_task.job_id;
     let stage_id = multi_task.stage_id as usize;

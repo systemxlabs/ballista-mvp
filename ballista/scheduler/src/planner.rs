@@ -266,8 +266,6 @@ mod test {
     use datafusion::physical_plan::{displayable, ExecutionPlan};
     use datafusion::prelude::SessionContext;
     use datafusion_proto::physical_plan::AsExecutionPlan;
-    use datafusion_proto::protobuf::LogicalPlanNode;
-    use datafusion_proto::protobuf::PhysicalPlanNode;
     use std::ops::Deref;
     use std::sync::Arc;
     use uuid::Uuid;
@@ -571,7 +569,7 @@ order by
         ctx: &SessionContext,
         plan: Arc<dyn ExecutionPlan>,
     ) -> Result<Arc<dyn ExecutionPlan>, BallistaError> {
-        let codec: BallistaCodec<LogicalPlanNode, PhysicalPlanNode> = BallistaCodec::default();
+        let codec: BallistaCodec = BallistaCodec::default();
         let proto: datafusion_proto::protobuf::PhysicalPlanNode =
             datafusion_proto::protobuf::PhysicalPlanNode::try_from_physical_plan(
                 plan.clone(),

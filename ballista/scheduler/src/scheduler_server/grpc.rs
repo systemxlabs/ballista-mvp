@@ -22,8 +22,6 @@ use ballista_core::serde::protobuf::{
 };
 use ballista_core::serde::scheduler::ExecutorMetadata;
 
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 use log::{debug, error, warn};
 
 use tonic::{Request, Response, Status};
@@ -31,9 +29,7 @@ use tonic::{Request, Response, Status};
 use crate::scheduler_server::{timestamp_secs, SchedulerServer};
 
 #[tonic::async_trait]
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerGrpc
-    for SchedulerServer<T, U>
-{
+impl SchedulerGrpc for SchedulerServer {
     async fn heart_beat_from_executor(
         &self,
         request: Request<HeartBeatParams>,
@@ -127,8 +123,6 @@ mod test {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use datafusion_proto::protobuf::LogicalPlanNode;
-    use datafusion_proto::protobuf::PhysicalPlanNode;
     use tonic::Request;
 
     use crate::config::SchedulerConfig;
@@ -150,14 +144,13 @@ mod test {
 
         let config = SchedulerConfig::default();
         let scheduler_name = "localhost:50050".to_owned();
-        let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new(
-                scheduler_name.clone(),
-                cluster,
-                BallistaCodec::default(),
-                Arc::new(config),
-                Arc::new(DefaultTaskLauncher::new(scheduler_name)),
-            );
+        let mut scheduler: SchedulerServer = SchedulerServer::new(
+            scheduler_name.clone(),
+            cluster,
+            BallistaCodec::default(),
+            Arc::new(config),
+            Arc::new(DefaultTaskLauncher::new(scheduler_name)),
+        );
         scheduler.init().await?;
 
         let exec_meta = ExecutorRegistration {
@@ -202,14 +195,13 @@ mod test {
 
         let config = SchedulerConfig::default();
         let scheduler_name = "localhost:50050".to_owned();
-        let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new(
-                scheduler_name.clone(),
-                cluster.clone(),
-                BallistaCodec::default(),
-                Arc::new(config),
-                Arc::new(DefaultTaskLauncher::new(scheduler_name)),
-            );
+        let mut scheduler: SchedulerServer = SchedulerServer::new(
+            scheduler_name.clone(),
+            cluster.clone(),
+            BallistaCodec::default(),
+            Arc::new(config),
+            Arc::new(DefaultTaskLauncher::new(scheduler_name)),
+        );
         scheduler.init().await?;
 
         let exec_meta = ExecutorRegistration {

@@ -54,7 +54,6 @@ use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use crate::cluster::storage::sled::SledClient;
 use crate::state::execution_graph::{ExecutionGraph, TaskDescription};
 use ballista_core::utils::default_session_builder;
-use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub const TPCH_TABLES: &[&str] = &[
@@ -366,7 +365,7 @@ impl TaskLauncher for VirtualTaskLauncher {
 }
 
 pub struct SchedulerTest {
-    scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode>,
+    scheduler: SchedulerServer,
     ballista_config: HashMap<String, String>,
     status_receiver: Option<Receiver<(String, Vec<TaskStatus>)>>,
 }
@@ -412,14 +411,13 @@ impl SchedulerTest {
             executors: executors.clone(),
         };
 
-        let mut scheduler: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-            SchedulerServer::new(
-                "localhost:50050".to_owned(),
-                cluster,
-                BallistaCodec::default(),
-                Arc::new(config),
-                Arc::new(launcher),
-            );
+        let mut scheduler: SchedulerServer = SchedulerServer::new(
+            "localhost:50050".to_owned(),
+            cluster,
+            BallistaCodec::default(),
+            Arc::new(config),
+            Arc::new(launcher),
+        );
         scheduler.init().await?;
 
         for (executor_id, VirtualExecutor { task_slots, .. }) in executors {

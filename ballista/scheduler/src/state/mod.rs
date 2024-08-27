@@ -40,8 +40,6 @@ use ballista_core::serde::BallistaCodec;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::physical_plan::display::DisplayableExecutionPlan;
 use datafusion::prelude::SessionContext;
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 use log::{debug, error, info, warn};
 use prost::Message;
 
@@ -74,18 +72,18 @@ pub fn encode_protobuf<T: Message + Default>(msg: &T) -> Result<Vec<u8>> {
 }
 
 #[derive(Clone)]
-pub struct SchedulerState<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
+pub struct SchedulerState {
     pub executor_manager: ExecutorManager,
-    pub task_manager: TaskManager<T, U>,
+    pub task_manager: TaskManager,
     pub session_manager: SessionManager,
-    pub codec: BallistaCodec<T, U>,
+    pub codec: BallistaCodec,
     pub config: Arc<SchedulerConfig>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerState<T, U> {
+impl SchedulerState {
     pub fn new(
         cluster: BallistaCluster,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
         scheduler_name: String,
         config: Arc<SchedulerConfig>,
         launcher: Arc<dyn TaskLauncher>,

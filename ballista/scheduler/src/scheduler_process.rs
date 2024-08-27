@@ -26,8 +26,6 @@ use std::sync::Arc;
 use tonic::transport::server::Connected;
 use tower::Service;
 
-use datafusion_proto::protobuf::{LogicalPlanNode, PhysicalPlanNode};
-
 use ballista_core::serde::protobuf::scheduler_grpc_server::SchedulerGrpcServer;
 use ballista_core::serde::BallistaCodec;
 use ballista_core::utils::create_grpc_server;
@@ -52,14 +50,13 @@ pub async fn start_server(
     // Should only call SchedulerServer::new() once in the process
     info!("Starting Scheduler grpc server with push task scheduling policy",);
 
-    let mut scheduler_server: SchedulerServer<LogicalPlanNode, PhysicalPlanNode> =
-        SchedulerServer::new(
-            config.scheduler_name(),
-            cluster,
-            BallistaCodec::default(),
-            config.clone(),
-            Arc::new(DefaultTaskLauncher::new(config.scheduler_name())),
-        );
+    let mut scheduler_server: SchedulerServer = SchedulerServer::new(
+        config.scheduler_name(),
+        cluster,
+        BallistaCodec::default(),
+        config.clone(),
+        Arc::new(DefaultTaskLauncher::new(config.scheduler_name())),
+    );
 
     scheduler_server.init().await?;
 

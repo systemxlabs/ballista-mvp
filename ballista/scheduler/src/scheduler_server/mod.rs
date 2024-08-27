@@ -26,8 +26,6 @@ use ballista_core::serde::BallistaCodec;
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{SessionConfig, SessionContext};
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 
 use crate::cluster::BallistaCluster;
 use crate::config::SchedulerConfig;
@@ -49,20 +47,20 @@ pub(crate) mod query_stage_scheduler;
 pub(crate) type SessionBuilder = fn(SessionConfig) -> SessionState;
 
 #[derive(Clone)]
-pub struct SchedulerServer<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> {
+pub struct SchedulerServer {
     pub scheduler_name: String,
     pub start_time: u128,
-    pub state: Arc<SchedulerState<T, U>>,
+    pub state: Arc<SchedulerState>,
     pub(crate) query_stage_event_loop: EventLoop<QueryStageSchedulerEvent>,
     #[allow(dead_code)]
     config: Arc<SchedulerConfig>,
 }
 
-impl<T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan> SchedulerServer<T, U> {
+impl SchedulerServer {
     pub fn new(
         scheduler_name: String,
         cluster: BallistaCluster,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
         config: Arc<SchedulerConfig>,
         task_launcher: Arc<dyn TaskLauncher>,
     ) -> Self {

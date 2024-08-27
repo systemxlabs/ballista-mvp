@@ -20,8 +20,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use datafusion::prelude::SessionContext;
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 use futures::Stream;
 use log::{debug, info, warn};
 
@@ -63,11 +61,11 @@ impl BallistaCluster {
         }
     }
 
-    pub fn new_kv<S: KeyValueStore, T: 'static + AsLogicalPlan, U: 'static + AsExecutionPlan>(
+    pub fn new_kv<S: KeyValueStore>(
         store: S,
         scheduler: impl Into<String>,
         session_builder: SessionBuilder,
-        codec: BallistaCodec<T, U>,
+        codec: BallistaCodec,
     ) -> Self {
         let kv_state = Arc::new(KeyValueState::new(scheduler, store, codec, session_builder));
         Self {

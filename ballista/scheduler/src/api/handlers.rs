@@ -16,8 +16,6 @@ use crate::state::execution_graph::ExecutionStage;
 use ballista_core::serde::protobuf::job_status::Status;
 use ballista_core::BALLISTA_VERSION;
 use datafusion::physical_plan::metrics::{MetricValue, MetricsSet, Time};
-use datafusion_proto::logical_plan::AsLogicalPlan;
-use datafusion_proto::physical_plan::AsExecutionPlan;
 
 use std::time::Duration;
 use warp::Rejection;
@@ -60,8 +58,8 @@ pub struct QueryStageSummary {
 }
 
 /// Return current scheduler state
-pub(crate) async fn get_scheduler_state<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
+pub(crate) async fn get_scheduler_state(
+    data_server: SchedulerServer,
 ) -> Result<impl warp::Reply, Rejection> {
     let response = SchedulerStateResponse {
         started: data_server.start_time,
@@ -71,8 +69,8 @@ pub(crate) async fn get_scheduler_state<T: AsLogicalPlan, U: AsExecutionPlan>(
 }
 
 /// Return list of executors
-pub(crate) async fn get_executors<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
+pub(crate) async fn get_executors(
+    data_server: SchedulerServer,
 ) -> Result<impl warp::Reply, Rejection> {
     let state = data_server.state;
     let executors: Vec<ExecutorMetaResponse> = state
@@ -93,9 +91,7 @@ pub(crate) async fn get_executors<T: AsLogicalPlan, U: AsExecutionPlan>(
 }
 
 /// Return list of jobs
-pub(crate) async fn get_jobs<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
-) -> Result<impl warp::Reply, Rejection> {
+pub(crate) async fn get_jobs(data_server: SchedulerServer) -> Result<impl warp::Reply, Rejection> {
     // TODO: Display last seen information in UI
     let state = data_server.state;
 
@@ -155,8 +151,8 @@ pub(crate) async fn get_jobs<T: AsLogicalPlan, U: AsExecutionPlan>(
     Ok(warp::reply::json(&jobs))
 }
 
-pub(crate) async fn cancel_job<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
+pub(crate) async fn cancel_job(
+    data_server: SchedulerServer,
     job_id: String,
 ) -> Result<impl warp::Reply, Rejection> {
     // 404 if job doesn't exist
@@ -185,8 +181,8 @@ pub struct QueryStagesResponse {
 }
 
 /// Get the execution graph for the specified job id
-pub(crate) async fn get_query_stages<T: AsLogicalPlan, U: AsExecutionPlan>(
-    data_server: SchedulerServer<T, U>,
+pub(crate) async fn get_query_stages(
+    data_server: SchedulerServer,
     job_id: String,
 ) -> Result<impl warp::Reply, Rejection> {
     if let Some(graph) = data_server
