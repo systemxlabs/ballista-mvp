@@ -45,13 +45,11 @@ use crate::display::print_stage_metrics;
 use crate::planner::DistributedPlanner;
 use crate::scheduler_server::event::QueryStageSchedulerEvent;
 use crate::scheduler_server::timestamp_millis;
-use crate::state::execution_graph::execution_stage::RunningStage;
-pub(crate) use crate::state::execution_graph::execution_stage::{
+use crate::state::execution_stage::RunningStage;
+pub(crate) use crate::state::execution_stage::{
     ExecutionStage, ResolvedStage, SuccessfulStage, TaskInfo, UnresolvedStage,
 };
 use crate::state::task_manager::UpdatedStages;
-
-mod execution_stage;
 
 /// Represents the DAG for a distributed query plan.
 ///
