@@ -88,7 +88,7 @@ pub fn get_routes(scheduler_server: SchedulerServer) -> BoxedFilter<(impl Reply,
 
     let route_jobs = warp::path!("api" / "jobs")
         .and(with_data_server(scheduler_server.clone()))
-        .and_then(|data_server| handlers::get_jobs(data_server));
+        .and_then(handlers::get_jobs);
 
     let route_cancel_job = warp::path!("api" / "job" / String)
         .and(warp::patch())
