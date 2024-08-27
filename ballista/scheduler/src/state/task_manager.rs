@@ -316,11 +316,6 @@ impl TaskManager {
         Ok(())
     }
 
-    /// Cancel the job and return a Vec of running tasks need to cancel
-    pub(crate) async fn cancel_job(&self, job_id: &str) -> Result<(Vec<RunningTaskInfo>, usize)> {
-        self.abort_job(job_id, "Cancelled".to_owned()).await
-    }
-
     /// Abort the job and return a Vec of running tasks need to cancel
     pub(crate) async fn abort_job(
         &self,

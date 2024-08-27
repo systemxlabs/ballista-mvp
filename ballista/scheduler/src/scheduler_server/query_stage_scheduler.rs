@@ -171,7 +171,12 @@ impl EventAction<QueryStageSchedulerEvent> for QueryStageScheduler {
             }
             QueryStageSchedulerEvent::JobCancel(job_id) => {
                 info!("Job {} Cancelled", job_id);
-                match self.state.task_manager.cancel_job(&job_id).await {
+                match self
+                    .state
+                    .task_manager
+                    .abort_job(&job_id, "Cancelled".to_owned())
+                    .await
+                {
                     Ok((running_tasks, _pending_tasks)) => {
                         event_sender
                             .post_event(QueryStageSchedulerEvent::CancelTasks(running_tasks))
