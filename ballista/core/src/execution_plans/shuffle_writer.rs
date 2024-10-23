@@ -275,11 +275,10 @@ impl ShuffleWriterExec {
                     let mut part_locs = vec![];
 
                     for (i, w) in writers.iter_mut().enumerate() {
-                        match w {
-                            Some(w) => {
-                                let num_bytes = fs::metadata(&w.path)?.len();
-                                w.writer.finish()?;
-                                debug!(
+                        if let Some(w) = w {
+                            let num_bytes = fs::metadata(&w.path)?.len();
+                            w.writer.finish()?;
+                            debug!(
                                     "Finished writing shuffle partition {} at {:?}. Batches: {}. Rows: {}. Bytes: {}.",
                                     i,
                                     w.path,
@@ -288,15 +287,13 @@ impl ShuffleWriterExec {
                                     num_bytes
                                 );
 
-                                part_locs.push(ShuffleWritePartition {
-                                    partition_id: i as u64,
-                                    path: w.path.to_string_lossy().to_string(),
-                                    num_batches: w.num_batches as u64,
-                                    num_rows: w.num_rows as u64,
-                                    num_bytes,
-                                });
-                            }
-                            None => {}
+                            part_locs.push(ShuffleWritePartition {
+                                partition_id: i as u64,
+                                path: w.path.to_string_lossy().to_string(),
+                                num_batches: w.num_batches as u64,
+                                num_rows: w.num_rows as u64,
+                                num_bytes,
+                            });
                         }
                     }
                     Ok(part_locs)
