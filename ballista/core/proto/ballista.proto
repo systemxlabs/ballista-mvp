@@ -171,8 +171,6 @@ message FetchPartition {
 }
 
 message PartitionLocation {
-  // partition_id of the map stage who produces the shuffle.
-  uint32 map_partition_id = 1;
   // partition_id of the shuffle, a composition of(job_id + map_stage_id + partition_id).
   PartitionId partition_id = 2;
   ExecutorMetadata executor_meta = 3;

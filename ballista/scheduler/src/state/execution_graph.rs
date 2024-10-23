@@ -297,7 +297,6 @@ impl ExecutionGraph {
 
                             locations.append(&mut partition_to_location(
                                 &job_id,
-                                partition_id,
                                 stage_id,
                                 executor,
                                 successful_task.partitions,
@@ -335,13 +334,6 @@ impl ExecutionGraph {
                             )?
                             .into_iter(),
                     );
-                } else if let ExecutionStage::UnResolved(_unsolved_stage) = stage {
-                    for task_status in stage_task_statuses.into_iter() {
-                        // handle delayed failed tasks if the stage's next attempt is still in UnResolved status.
-                        if let Some(task_status::Status::Failed(failed_task)) = task_status.status {
-                            failed_stages.insert(stage_id, failed_task.error);
-                        }
-                    }
                 } else {
                     warn!(
                         "Stage {}/{} is not in running when updating the status of tasks {:?}",
@@ -914,7 +906,6 @@ impl TaskDescription {
 
 fn partition_to_location(
     job_id: &str,
-    map_partition_id: usize,
     stage_id: usize,
     executor: &ExecutorMetadata,
     shuffles: Vec<ShuffleWritePartition>,
@@ -922,7 +913,6 @@ fn partition_to_location(
     shuffles
         .into_iter()
         .map(|shuffle| PartitionLocation {
-            map_partition_id,
             partition_id: PartitionId {
                 job_id: job_id.to_owned(),
                 stage_id,

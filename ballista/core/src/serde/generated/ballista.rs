@@ -260,9 +260,6 @@ pub struct FetchPartition {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PartitionLocation {
-    /// partition_id of the map stage who produces the shuffle.
-    #[prost(uint32, tag = "1")]
-    pub map_partition_id: u32,
     /// partition_id of the shuffle, a composition of(job_id + map_stage_id + partition_id).
     #[prost(message, optional, tag = "2")]
     pub partition_id: ::core::option::Option<PartitionId>,

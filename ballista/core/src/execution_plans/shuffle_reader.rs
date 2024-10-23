@@ -467,7 +467,6 @@ mod tests {
         let mut partitions: Vec<PartitionLocation> = vec![];
         for partition_id in 0..4 {
             partitions.push(PartitionLocation {
-                map_partition_id: 0,
                 partition_id: PartitionId {
                     job_id: job_id.to_string(),
                     stage_id: input_stage_id,
@@ -582,7 +581,6 @@ mod tests {
     fn get_test_partition_locations(n: usize, path: String) -> Vec<PartitionLocation> {
         (0..n)
             .map(|partition_id| PartitionLocation {
-                map_partition_id: 0,
                 partition_id: PartitionId {
                     job_id: "job".to_string(),
                     stage_id: 1,
