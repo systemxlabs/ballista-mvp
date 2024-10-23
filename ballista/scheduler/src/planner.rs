@@ -188,17 +188,16 @@ pub fn remove_unresolved_shuffles(
                 }
             }
             debug!(
-                "Creating shuffle reader: {}",
+                "Creating shuffle reader: {:?}",
                 relevant_locations
                     .iter()
+                    .filter(|c| !c.is_empty())
                     .map(|c| c
                         .iter()
                         .filter(|l| !l.path.is_empty())
                         .map(|l| l.path.clone())
-                        .collect::<Vec<_>>()
-                        .join(", "))
+                        .collect::<Vec<_>>())
                     .collect::<Vec<_>>()
-                    .join("\n")
             );
             new_children.push(Arc::new(ShuffleReaderExec::new(
                 unresolved_shuffle.stage_id,
