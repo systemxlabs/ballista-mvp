@@ -32,6 +32,8 @@ use datafusion_proto::{
     physical_plan::PhysicalExtensionCodec,
 };
 
+use arrow::datatypes::{Schema, SchemaRef};
+use datafusion_proto::protobuf::PhysicalExprNode;
 use prost::Message;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -145,7 +147,7 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
             }
             PhysicalPlanType::ShuffleReader(shuffle_reader) => {
                 let stage_id = shuffle_reader.stage_id as usize;
-                let schema = Arc::new(convert_required!(shuffle_reader.schema)?);
+                let schema: SchemaRef = Arc::new(convert_required!(shuffle_reader.schema)?);
                 let partition_location: Vec<Vec<PartitionLocation>> = shuffle_reader
                     .partition
                     .iter()
@@ -162,15 +164,28 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
                             .collect::<Result<Vec<_>, _>>()
                     })
                     .collect::<Result<Vec<_>, DataFusionError>>()?;
-                let shuffle_reader = ShuffleReaderExec::new(stage_id, partition_location, schema);
+                let partitioning = parse_protobuf_partitioning(
+                    shuffle_reader.partitioning.as_ref(),
+                    registry,
+                    schema.as_ref(),
+                )?
+                .expect("partitioning is required");
+                let shuffle_reader =
+                    ShuffleReaderExec::new(stage_id, partitioning, partition_location, schema);
                 Ok(Arc::new(shuffle_reader))
             }
             PhysicalPlanType::UnresolvedShuffle(unresolved_shuffle) => {
-                let schema = Arc::new(convert_required!(unresolved_shuffle.schema)?);
+                let schema: SchemaRef = Arc::new(convert_required!(unresolved_shuffle.schema)?);
+                let partitioning = parse_protobuf_partitioning(
+                    unresolved_shuffle.partitioning.as_ref(),
+                    registry,
+                    schema.as_ref(),
+                )?
+                .expect("partitioning is required");
                 Ok(Arc::new(UnresolvedShuffleExec {
                     stage_id: unresolved_shuffle.stage_id as usize,
                     schema,
-                    output_partition_count: unresolved_shuffle.output_partition_count as usize,
+                    partitioning,
                 }))
             }
         }
@@ -237,12 +252,14 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
                         .collect::<Result<Vec<_>, _>>()?,
                 });
             }
+            let partitioning = serialize_partitioning(&exec.partitioning)?;
             let proto = protobuf::BallistaPhysicalPlanNode {
                 physical_plan_type: Some(PhysicalPlanType::ShuffleReader(
                     protobuf::ShuffleReaderExecNode {
                         stage_id,
                         partition,
                         schema: Some(exec.schema.as_ref().try_into()?),
+                        partitioning: Some(partitioning),
                     },
                 )),
             };
@@ -254,12 +271,13 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
 
             Ok(())
         } else if let Some(exec) = node.as_any().downcast_ref::<UnresolvedShuffleExec>() {
+            let partitioning = serialize_partitioning(&exec.partitioning)?;
             let proto = protobuf::BallistaPhysicalPlanNode {
                 physical_plan_type: Some(PhysicalPlanType::UnresolvedShuffle(
                     protobuf::UnresolvedShuffleExecNode {
                         stage_id: exec.stage_id as u32,
                         schema: Some(exec.schema.as_ref().try_into()?),
-                        output_partition_count: exec.output_partition_count as u32,
+                        partitioning: Some(partitioning),
                     },
                 )),
             };
@@ -275,5 +293,59 @@ impl PhysicalExtensionCodec for BallistaPhysicalExtensionCodec {
                 "unsupported plan type".to_string(),
             ))
         }
+    }
+}
+
+pub fn serialize_partitioning(
+    partitioning: &Partitioning,
+) -> Result<protobuf::Partitioning, DataFusionError> {
+    let serialized_partitioning = match partitioning {
+        Partitioning::RoundRobinBatch(partition_count) => protobuf::Partitioning {
+            partition_method: Some(protobuf::partitioning::PartitionMethod::RoundRobin(
+                *partition_count as u64,
+            )),
+        },
+        Partitioning::Hash(exprs, partition_count) => {
+            let serialized_exprs = exprs
+                .iter()
+                .map(|e| e.clone().try_into())
+                .collect::<Result<Vec<PhysicalExprNode>, DataFusionError>>()?;
+            protobuf::Partitioning {
+                partition_method: Some(protobuf::partitioning::PartitionMethod::Hash(
+                    datafusion_proto::protobuf::PhysicalHashRepartition {
+                        hash_expr: serialized_exprs,
+                        partition_count: *partition_count as u64,
+                    },
+                )),
+            }
+        }
+        Partitioning::UnknownPartitioning(partition_count) => protobuf::Partitioning {
+            partition_method: Some(protobuf::partitioning::PartitionMethod::Unknown(
+                *partition_count as u64,
+            )),
+        },
+    };
+    Ok(serialized_partitioning)
+}
+
+pub fn parse_protobuf_partitioning(
+    partitioning: Option<&protobuf::Partitioning>,
+    registry: &dyn FunctionRegistry,
+    input_schema: &Schema,
+) -> Result<Option<Partitioning>, DataFusionError> {
+    match partitioning {
+        Some(protobuf::Partitioning { partition_method }) => match partition_method {
+            Some(protobuf::partitioning::PartitionMethod::RoundRobin(partition_count)) => Ok(Some(
+                Partitioning::RoundRobinBatch(*partition_count as usize),
+            )),
+            Some(protobuf::partitioning::PartitionMethod::Hash(hash_repartition)) => {
+                parse_protobuf_hash_partitioning(Some(hash_repartition), registry, input_schema)
+            }
+            Some(protobuf::partitioning::PartitionMethod::Unknown(partition_count)) => Ok(Some(
+                Partitioning::UnknownPartitioning(*partition_count as usize),
+            )),
+            None => Ok(None),
+        },
+        None => Ok(None),
     }
 }

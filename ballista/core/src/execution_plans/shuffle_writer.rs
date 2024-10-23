@@ -313,8 +313,8 @@ impl DisplayAs for ShuffleWriterExec {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
                 write!(
                     f,
-                    "ShuffleWriterExec: {:?}",
-                    self.shuffle_output_partitioning
+                    "ShuffleWriterExec: partitioning={}",
+                    self.output_partitioning()
                 )
             }
         }

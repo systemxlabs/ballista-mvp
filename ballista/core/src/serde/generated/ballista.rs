@@ -45,8 +45,8 @@ pub struct UnresolvedShuffleExecNode {
     pub stage_id: u32,
     #[prost(message, optional, tag = "2")]
     pub schema: ::core::option::Option<::datafusion_proto::protobuf::Schema>,
-    #[prost(uint32, tag = "4")]
-    pub output_partition_count: u32,
+    #[prost(message, optional, tag = "3")]
+    pub partitioning: ::core::option::Option<Partitioning>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -58,6 +58,27 @@ pub struct ShuffleReaderExecNode {
     /// The stage to read from
     #[prost(uint32, tag = "3")]
     pub stage_id: u32,
+    #[prost(message, optional, tag = "4")]
+    pub partitioning: ::core::option::Option<Partitioning>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Partitioning {
+    #[prost(oneof = "partitioning::PartitionMethod", tags = "1, 2, 3")]
+    pub partition_method: ::core::option::Option<partitioning::PartitionMethod>,
+}
+/// Nested message and enum types in `Partitioning`.
+pub mod partitioning {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum PartitionMethod {
+        #[prost(uint64, tag = "1")]
+        RoundRobin(u64),
+        #[prost(message, tag = "2")]
+        Hash(::datafusion_proto::protobuf::PhysicalHashRepartition),
+        #[prost(uint64, tag = "3")]
+        Unknown(u64),
+    }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

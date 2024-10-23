@@ -62,6 +62,7 @@ pub struct ShuffleReaderExec {
     /// The query stage id to read from
     pub stage_id: usize,
     pub(crate) schema: SchemaRef,
+    pub(crate) partitioning: Partitioning,
     /// Each partition of a shuffle can read data from multiple locations
     pub partition: Vec<Vec<PartitionLocation>>,
     /// Execution metrics
@@ -70,10 +71,16 @@ pub struct ShuffleReaderExec {
 
 impl ShuffleReaderExec {
     /// Create a new ShuffleReaderExec
-    pub fn new(stage_id: usize, partition: Vec<Vec<PartitionLocation>>, schema: SchemaRef) -> Self {
+    pub fn new(
+        stage_id: usize,
+        partitioning: Partitioning,
+        partition: Vec<Vec<PartitionLocation>>,
+        schema: SchemaRef,
+    ) -> Self {
         Self {
             stage_id,
             schema,
+            partitioning,
             partition,
             metrics: ExecutionPlanMetricsSet::new(),
         }
@@ -84,7 +91,7 @@ impl DisplayAs for ShuffleReaderExec {
     fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match t {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
-                write!(f, "ShuffleReaderExec: partitions={}", self.partition.len())
+                write!(f, "ShuffleReaderExec: partitioning={}", self.partitioning)
             }
         }
     }
@@ -100,9 +107,7 @@ impl ExecutionPlan for ShuffleReaderExec {
     }
 
     fn output_partitioning(&self) -> Partitioning {
-        // TODO partitioning may be known and could be populated here
-        // see https://github.com/apache/arrow-datafusion/issues/758
-        Partitioning::UnknownPartitioning(self.partition.len())
+        self.partitioning.clone()
     }
 
     fn output_ordering(&self) -> Option<&[PhysicalSortExpr]> {
@@ -119,6 +124,7 @@ impl ExecutionPlan for ShuffleReaderExec {
     ) -> Result<Arc<dyn ExecutionPlan>> {
         Ok(Arc::new(ShuffleReaderExec::new(
             self.stage_id,
+            self.partitioning.clone(),
             self.partition.clone(),
             self.schema.clone(),
         )))
@@ -483,9 +489,14 @@ mod tests {
                 path: "test_path".to_string(),
             })
         }
+        let partitioning = Partitioning::UnknownPartitioning(partitions.len());
 
-        let shuffle_reader_exec =
-            ShuffleReaderExec::new(input_stage_id, vec![partitions], Arc::new(schema));
+        let shuffle_reader_exec = ShuffleReaderExec::new(
+            input_stage_id,
+            partitioning,
+            vec![partitions],
+            Arc::new(schema),
+        );
         let mut stream = shuffle_reader_exec.execute(0, task_ctx)?;
         let batches = utils::collect_stream(&mut stream).await;
 

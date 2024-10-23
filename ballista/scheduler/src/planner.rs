@@ -158,17 +158,18 @@ fn create_unresolved_shuffle(shuffle_writer: &ShuffleWriterExec) -> Arc<Unresolv
     Arc::new(UnresolvedShuffleExec::new(
         shuffle_writer.stage_id(),
         shuffle_writer.schema(),
-        shuffle_writer.output_partitioning().partition_count(),
+        shuffle_writer.output_partitioning(),
     ))
 }
 
-pub fn remove_unresolved_shuffles(
+pub(crate) fn remove_unresolved_shuffles(
     stage: Arc<dyn ExecutionPlan>,
     partition_locations: &HashMap<usize, HashMap<usize, Vec<PartitionLocation>>>,
 ) -> Result<Arc<dyn ExecutionPlan>> {
     let mut new_children: Vec<Arc<dyn ExecutionPlan>> = vec![];
     for child in stage.children() {
         if let Some(unresolved_shuffle) = child.as_any().downcast_ref::<UnresolvedShuffleExec>() {
+            let partitioning = unresolved_shuffle.output_partitioning();
             let mut relevant_locations = vec![];
             let p = partition_locations
                 .get(&unresolved_shuffle.stage_id)
@@ -180,7 +181,7 @@ pub fn remove_unresolved_shuffles(
                 })?
                 .clone();
 
-            for i in 0..unresolved_shuffle.output_partition_count {
+            for i in 0..partitioning.partition_count() {
                 if let Some(x) = p.get(&i) {
                     relevant_locations.push(x.to_owned());
                 } else {
@@ -201,34 +202,12 @@ pub fn remove_unresolved_shuffles(
             );
             new_children.push(Arc::new(ShuffleReaderExec::new(
                 unresolved_shuffle.stage_id,
+                partitioning,
                 relevant_locations,
                 unresolved_shuffle.schema().clone(),
             )))
         } else {
             new_children.push(remove_unresolved_shuffles(child, partition_locations)?);
-        }
-    }
-    Ok(with_new_children_if_necessary(stage, new_children)?.into())
-}
-
-/// Rollback the ShuffleReaderExec to UnresolvedShuffleExec.
-/// Used when the input stages are finished but some partitions are missing due to executor lost.
-/// The entire stage need to be rolled back and rescheduled.
-pub fn rollback_resolved_shuffles(stage: Arc<dyn ExecutionPlan>) -> Result<Arc<dyn ExecutionPlan>> {
-    let mut new_children: Vec<Arc<dyn ExecutionPlan>> = vec![];
-    for child in stage.children() {
-        if let Some(shuffle_reader) = child.as_any().downcast_ref::<ShuffleReaderExec>() {
-            let output_partition_count = shuffle_reader.output_partitioning().partition_count();
-            let stage_id = shuffle_reader.stage_id;
-
-            let unresolved_shuffle = Arc::new(UnresolvedShuffleExec::new(
-                stage_id,
-                shuffle_reader.schema(),
-                output_partition_count,
-            ));
-            new_children.push(unresolved_shuffle);
-        } else {
-            new_children.push(rollback_resolved_shuffles(child)?);
         }
     }
     Ok(with_new_children_if_necessary(stage, new_children)?.into())
@@ -339,7 +318,7 @@ mod test {
         let unresolved_shuffle = coalesce.children()[0].clone();
         let unresolved_shuffle = downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle.stage_id, 1);
-        assert_eq!(unresolved_shuffle.output_partition_count, 2);
+        assert_eq!(unresolved_shuffle.partitioning.partition_count(), 2);
 
         // verify stage 2
         let stage2 = stages[2].children()[0].clone();
@@ -347,7 +326,7 @@ mod test {
         let unresolved_shuffle = merge.children()[0].clone();
         let unresolved_shuffle = downcast_exec!(unresolved_shuffle, UnresolvedShuffleExec);
         assert_eq!(unresolved_shuffle.stage_id, 2);
-        assert_eq!(unresolved_shuffle.output_partition_count, 2);
+        assert_eq!(unresolved_shuffle.partitioning.partition_count(), 2);
 
         Ok(())
     }
@@ -498,13 +477,19 @@ order by
         // skip CoalesceBatches
         let join_input_1 = join_input_1.children()[0].clone();
         let unresolved_shuffle_reader_1 = downcast_exec!(join_input_1, UnresolvedShuffleExec);
-        assert_eq!(unresolved_shuffle_reader_1.output_partition_count, 2);
+        assert_eq!(
+            unresolved_shuffle_reader_1.partitioning.partition_count(),
+            2
+        );
 
         let join_input_2 = join.children()[1].clone();
         // skip CoalesceBatches
         let join_input_2 = join_input_2.children()[0].clone();
         let unresolved_shuffle_reader_2 = downcast_exec!(join_input_2, UnresolvedShuffleExec);
-        assert_eq!(unresolved_shuffle_reader_2.output_partition_count, 2);
+        assert_eq!(
+            unresolved_shuffle_reader_2.partitioning.partition_count(),
+            2
+        );
 
         // final partitioned hash aggregate
         assert_eq!(

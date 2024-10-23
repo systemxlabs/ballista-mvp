@@ -39,17 +39,17 @@ pub struct UnresolvedShuffleExec {
     // The schema this node will have once it is replaced with a ShuffleReaderExec
     pub schema: SchemaRef,
 
-    // The partition count this node will have once it is replaced with a ShuffleReaderExec
-    pub output_partition_count: usize,
+    // The partitioning this node will have once it is replaced with a ShuffleReaderExec
+    pub partitioning: Partitioning,
 }
 
 impl UnresolvedShuffleExec {
     /// Create a new UnresolvedShuffleExec
-    pub fn new(stage_id: usize, schema: SchemaRef, output_partition_count: usize) -> Self {
+    pub fn new(stage_id: usize, schema: SchemaRef, partitioning: Partitioning) -> Self {
         Self {
             stage_id,
             schema,
-            output_partition_count,
+            partitioning,
         }
     }
 }
@@ -58,7 +58,11 @@ impl DisplayAs for UnresolvedShuffleExec {
     fn fmt_as(&self, t: DisplayFormatType, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match t {
             DisplayFormatType::Default | DisplayFormatType::Verbose => {
-                write!(f, "UnresolvedShuffleExec")
+                write!(
+                    f,
+                    "UnresolvedShuffleExec: partitioning={}",
+                    self.partitioning
+                )
             }
         }
     }
@@ -74,9 +78,7 @@ impl ExecutionPlan for UnresolvedShuffleExec {
     }
 
     fn output_partitioning(&self) -> Partitioning {
-        // TODO the output partition is known and should be populated here!
-        // see https://github.com/apache/arrow-datafusion/issues/758
-        Partitioning::UnknownPartitioning(self.output_partition_count)
+        self.partitioning.clone()
     }
 
     fn output_ordering(&self) -> Option<&[PhysicalSortExpr]> {

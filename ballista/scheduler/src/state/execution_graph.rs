@@ -24,6 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use datafusion::physical_plan::display::DisplayableExecutionPlan;
 use datafusion::physical_plan::{accept, ExecutionPlan, ExecutionPlanVisitor};
 use datafusion::prelude::SessionContext;
+use itertools::Itertools;
 use log::{debug, info, warn};
 
 use ballista_core::error::{BallistaError, Result};
@@ -144,6 +145,7 @@ impl ExecutionGraph {
             "Planned shuffle stages: \n{}",
             shuffle_stages
                 .iter()
+                .sorted_by_key(|stage| stage.stage_id())
                 .map(|stage| DisplayableExecutionPlan::new(stage.as_ref())
                     .indent(true)
                     .to_string())
@@ -736,8 +738,9 @@ impl Debug for ExecutionGraph {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let stages = self
             .stages
-            .values()
-            .map(|stage| format!("{stage:?}"))
+            .iter()
+            .sorted_by_key(|(stage_id, _)| **stage_id)
+            .map(|(_, stage)| format!("{stage:?}"))
             .collect::<Vec<String>>()
             .join("");
         write!(
