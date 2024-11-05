@@ -50,12 +50,12 @@ arrow_cli --host localhost --port 50050 --user admin --password password
 +--------------+--------------+---------+--------------------+--------------------+--------------------+--------------------+-------------------+----------------------+-------------+
 ```
 
-# Chinese blog posts
-- [Ballista 分布式查询引擎 - 架构总览](https://systemxlabs.github.io/blog/ballista-mvp-part1/)
-- [Ballista 分布式查询引擎 - 分布式执行计划](https://systemxlabs.github.io/blog/ballista-mvp-part2/)
-- [Ballista 分布式查询引擎 - 事件驱动调度](https://systemxlabs.github.io/blog/ballista-mvp-part3/)
-- [Ballista 分布式查询引擎 - 集群共享状态](https://systemxlabs.github.io/blog/ballista-mvp-part4/)
-- [Ballista 分布式查询引擎 - 计划执行](https://systemxlabs.github.io/blog/ballista-mvp-part5/)
+# Chinese blog posts and videos
+- [Ballista 分布式查询引擎 - 架构总览](https://systemxlabs.github.io/blog/ballista-mvp-part1/) （[B 站](https://www.bilibili.com/video/BV1ym421g7UV)）
+- [Ballista 分布式查询引擎 - 分布式执行计划](https://systemxlabs.github.io/blog/ballista-mvp-part2/) （[B 站](https://www.bilibili.com/video/BV1Sw4m1a73S)）
+- [Ballista 分布式查询引擎 - 事件驱动调度](https://systemxlabs.github.io/blog/ballista-mvp-part3/) （[B 站](https://www.bilibili.com/video/BV1N1421t7jo)）
+- [Ballista 分布式查询引擎 - 集群共享状态](https://systemxlabs.github.io/blog/ballista-mvp-part4/) （[B 站](https://www.bilibili.com/video/BV1ExvXe8ED3)）
+- [Ballista 分布式查询引擎 - 计划执行](https://systemxlabs.github.io/blog/ballista-mvp-part5/) （[B 站](https://www.bilibili.com/video/BV1GjepecEpv)）
 
 # Ballista: Distributed SQL Query Engine, built on Apache Arrow
 
