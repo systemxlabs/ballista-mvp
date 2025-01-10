@@ -21,6 +21,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use std::collections::HashMap;
 
 use crate::cluster::JobState;
+use ballista_core::panic_udf::panic_udf;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -53,5 +54,7 @@ pub fn create_datafusion_context(
     let config = SessionConfig::from_string_hash_map(ballista_config.clone()).unwrap();
     let config = config.set_bool("datafusion.optimizer.enable_round_robin_repartition", false);
     let session_state = session_builder(config);
-    Arc::new(SessionContext::new_with_state(session_state))
+    let ctx = SessionContext::new_with_state(session_state);
+    ctx.register_udf(panic_udf());
+    Arc::new(ctx)
 }

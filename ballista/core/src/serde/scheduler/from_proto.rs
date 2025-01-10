@@ -34,6 +34,7 @@ use crate::serde::scheduler::{
     PartitionStats, TaskDefinition,
 };
 
+use crate::panic_udf::panic_udf;
 use crate::serde::{protobuf, BallistaCodec};
 use protobuf::{operator_metric, NamedCount, NamedGauge, NamedTime};
 
@@ -253,13 +254,11 @@ pub fn get_task_definition_vec(
     let props = Arc::new(props);
 
     let encoded_plan = multi_task.plan.as_slice();
+    let ctx = SessionContext::new();
+    ctx.register_udf(panic_udf());
     let plan: Arc<dyn ExecutionPlan> =
         PhysicalPlanNode::try_decode(encoded_plan).and_then(|proto| {
-            proto.try_into_physical_plan(
-                &SessionContext::new(),
-                runtime.as_ref(),
-                codec.physical_extension_codec(),
-            )
+            proto.try_into_physical_plan(&ctx, runtime.as_ref(), codec.physical_extension_codec())
         })?;
 
     let job_id = multi_task.job_id;

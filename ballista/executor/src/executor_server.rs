@@ -28,8 +28,13 @@ use log::{debug, error, info, warn};
 use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
 
+use crate::cpu_bound_executor::DedicatedExecutor;
+use crate::executor::Executor;
+use crate::executor_process::ExecutorProcessConfig;
+use crate::{as_task_status, TaskExecutionTimes};
 use ballista_core::error::BallistaError;
 use ballista_core::execution_plans::ShuffleWriterExec;
+use ballista_core::panic_udf::panic_udf;
 use ballista_core::serde::protobuf::{
     executor_grpc_server::{ExecutorGrpc, ExecutorGrpcServer},
     executor_status,
@@ -48,13 +53,9 @@ use datafusion::common::DataFusionError;
 use datafusion::config::ConfigOptions;
 use datafusion::execution::TaskContext;
 use datafusion::prelude::SessionConfig;
+use futures::FutureExt;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::task::JoinHandle;
-
-use crate::cpu_bound_executor::DedicatedExecutor;
-use crate::executor::Executor;
-use crate::executor_process::ExecutorProcessConfig;
-use crate::{as_task_status, TaskExecutionTimes};
 
 type ServerHandle = JoinHandle<Result<(), BallistaError>>;
 type SchedulerClients = Arc<DashMap<String, SchedulerGrpcClient<Channel>>>;
@@ -306,11 +307,13 @@ impl ExecutorServer {
 
             let runtime = self.executor.get_runtime();
 
+            let mut scalar_func = HashMap::new();
+            scalar_func.insert("panic".to_string(), Arc::new(panic_udf()));
             Arc::new(TaskContext::new(
                 Some(task_identity.clone()),
                 task.session_id,
                 session_config,
-                HashMap::new(),
+                scalar_func,
                 HashMap::new(),
                 HashMap::new(),
                 runtime,
@@ -319,10 +322,27 @@ impl ExecutorServer {
 
         info!("Start to execute shuffle write for task {}", task_identity);
 
-        let execution_result = self
-            .executor
-            .execute_query_stage(task_id, part.clone(), shuffle_writer.clone(), task_context)
-            .await;
+        use std::panic::AssertUnwindSafe;
+        let execution_result = match AssertUnwindSafe(self.executor.execute_query_stage(
+            task_id,
+            part.clone(),
+            shuffle_writer.clone(),
+            task_context,
+        ))
+        .catch_unwind()
+        .await
+        {
+            Ok(Ok(r)) => Ok(r),
+            Ok(Err(r)) => Err(r),
+            Err(_r) => {
+                error!("Panic executing task");
+                Err(BallistaError::Internal("panic when executing".to_string()))
+            }
+        };
+        // let execution_result = self
+        //     .executor
+        //     .execute_query_stage(task_id, part.clone(), shuffle_writer.clone(), task_context)
+        //     .await;
         info!("Done with task {}", task_identity);
         debug!("Statistics: {:?}", execution_result);
 

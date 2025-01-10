@@ -26,3 +26,4 @@ pub mod utils;
 
 #[macro_use]
 pub mod serde;
+pub mod panic_udf;
